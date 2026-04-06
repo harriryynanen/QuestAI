@@ -1,4 +1,4 @@
-# Business Q&A Assistant
+# QuestAI
 
 Lightweight Streamlit demo for a fictional business banking advisory Q&A assistant.
 
