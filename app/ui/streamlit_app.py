@@ -7,6 +7,7 @@ from retrieval.retriever import KeywordRetriever
 from services.answer_service import AnswerService
 from services.router import SimpleRouter
 from structured.customer_data import CustomerDataLoader
+from structured.query_engine import StructuredQueryEngine
 
 
 def run_app() -> None:
@@ -21,12 +22,14 @@ def run_app() -> None:
     customer_data_loader = CustomerDataLoader(
         structured_data_path=config.structured_data_path
     )
+    structured_query_engine = StructuredQueryEngine()
     answer_service = AnswerService(
         router=router,
         document_store=document_store,
         customer_data_loader=customer_data_loader,
         chunker=chunker,
         retriever=retriever,
+        structured_query_engine=structured_query_engine,
     )
     documents = document_store.list_documents()
     markdown_documents = document_store.load_markdown_documents()
@@ -91,6 +94,13 @@ def run_app() -> None:
                 st.write(f"- {source}")
         else:
             st.write("No sources were used for this answer.")
+
+        if response.matched_customer_name or response.matched_field_name:
+            st.subheader("Structured Match")
+            if response.matched_customer_name:
+                st.write(f"Matched customer: {response.matched_customer_name}")
+            if response.matched_field_name:
+                st.write(f"Matched field: {response.matched_field_name}")
 
         if response.retrieved_chunks:
             st.subheader("Retrieved Chunks")

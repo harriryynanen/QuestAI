@@ -15,6 +15,8 @@ class AnswerResponse:
     limitations: str
     route: Route
     retrieved_chunks: list["RetrievedChunk"]
+    matched_customer_name: str | None = None
+    matched_field_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -55,3 +57,13 @@ class RetrievedChunk:
     chunk: DocumentChunk
     score: int
     matched_terms: list[str]
+
+
+@dataclass(frozen=True)
+class StructuredQueryResult:
+    answer: str
+    sources_used: list[str]
+    support_level: SupportLevel
+    limitations: str
+    matched_customer_name: str | None
+    matched_field_name: str | None

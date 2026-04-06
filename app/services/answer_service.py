@@ -4,6 +4,7 @@ from retrieval.document_store import DocumentStore
 from retrieval.retriever import KeywordRetriever
 from services.router import SimpleRouter
 from structured.customer_data import CustomerDataLoader
+from structured.query_engine import StructuredQueryEngine
 
 
 class AnswerService:
@@ -14,22 +15,43 @@ class AnswerService:
         customer_data_loader: CustomerDataLoader,
         chunker: MarkdownChunker,
         retriever: KeywordRetriever,
+        structured_query_engine: StructuredQueryEngine,
     ) -> None:
         self.router = router
         self.document_store = document_store
         self.customer_data_loader = customer_data_loader
         self.chunker = chunker
         self.retriever = retriever
+        self.structured_query_engine = structured_query_engine
 
     def answer_question(self, question: str) -> AnswerResponse:
         route = self.router.classify(question)
         dataset_info = self.customer_data_loader.get_data_info()
+        dataframe = self.customer_data_loader.get_dataframe()
+        dataset_file_name = self.customer_data_loader.get_dataset_file_name()
         markdown_documents = self.document_store.load_markdown_documents()
         chunks = self.chunker.chunk_documents(markdown_documents)
 
         if route == "retrieval":
             retrieved_chunks = self.retriever.retrieve(question=question, chunks=chunks)
             return self._build_retrieval_response(retrieved_chunks)
+
+        if route == "structured":
+            structured_result = self.structured_query_engine.answer(
+                question=question,
+                dataframe=dataframe,
+                dataset_file_name=dataset_file_name,
+            )
+            return AnswerResponse(
+                answer=structured_result.answer,
+                sources_used=structured_result.sources_used,
+                support_level=structured_result.support_level,
+                limitations=structured_result.limitations,
+                route="structured",
+                retrieved_chunks=[],
+                matched_customer_name=structured_result.matched_customer_name,
+                matched_field_name=structured_result.matched_field_name,
+            )
 
         sources_used = []
         if dataset_info.dataset_found and dataset_info.file_name is not None:
@@ -43,15 +65,14 @@ class AnswerService:
 
         return AnswerResponse(
             answer=(
-                "This is a placeholder answer for the initial demo slice. "
-                f"The question was routed to the '{route}' path. "
-                "Structured and combined answer logic is not implemented yet."
+                "This question appears to need both document guidance and structured data. "
+                "Combined reasoning is not implemented yet in this demo."
             ),
             sources_used=sources_used,
             support_level="low",
             limitations=(
-                "Only markdown retrieval is partially implemented in this stage. "
-                "Structured and combined routes still use placeholder behavior."
+                "Markdown retrieval and deterministic CSV querying are available separately, "
+                "but the system does not yet synthesize them into one grounded combined answer."
             ),
             route=route,
             retrieved_chunks=[],
@@ -74,6 +95,8 @@ class AnswerService:
                 ),
                 route="retrieval",
                 retrieved_chunks=[],
+                matched_customer_name=None,
+                matched_field_name=None,
             )
 
         top_score = retrieved_chunks[0].score
@@ -106,6 +129,8 @@ class AnswerService:
             ),
             route="retrieval",
             retrieved_chunks=retrieved_chunks,
+            matched_customer_name=None,
+            matched_field_name=None,
         )
 
     def _shorten_text(self, text: str, max_length: int = 180) -> str:

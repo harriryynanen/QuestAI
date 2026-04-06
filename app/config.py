@@ -12,7 +12,7 @@ class AppConfig:
     app_title: str = "Business Q&A Assistant"
     app_description: str = (
         "Ask a question about a fictional business banking advisory scenario. "
-        "This demo currently uses simple routing and placeholder answers."
+        "This demo currently uses markdown retrieval and deterministic CSV querying."
     )
     retrieval_keywords: tuple[str, ...] = field(
         default_factory=lambda: (
@@ -27,12 +27,23 @@ class AppConfig:
     structured_keywords: tuple[str, ...] = field(
         default_factory=lambda: (
             "turnover",
+            "revenue",
             "equity ratio",
             "ebitda",
+            "debt to ebitda",
+            "years in operation",
+            "financial statements",
+            "tax arrears",
+            "payment delays",
+            "largest customer share",
+            "customer concentration",
             "highest",
+            "largest",
+            "missing",
             "lowest",
             "customer",
             "segment",
+            "interested in",
         )
     )
 
