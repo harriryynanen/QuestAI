@@ -3,9 +3,11 @@ from pathlib import Path
 from typing import Literal
 
 
-Route = Literal["retrieval", "structured", "combined"]
+Route = Literal["retrieval", "structured", "combined", "unknown"]
 SupportLevel = Literal["low", "medium", "high"]
 SynthesisStatus = Literal["success", "missing_api_key", "disabled", "api_error", "invalid_response"]
+RoutingMethod = Literal["llm", "rules", "safe_fallback"]
+RoutingStatus = Literal["success", "missing_api_key", "disabled", "api_error", "invalid_response"]
 
 
 @dataclass(frozen=True)
@@ -22,6 +24,9 @@ class AnswerResponse:
     synthesis_method: str = "deterministic"
     synthesis_status: SynthesisStatus | None = None
     synthesis_status_message: str | None = None
+    routing_method: RoutingMethod = "rules"
+    routing_confidence: SupportLevel = "low"
+    routing_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -82,4 +87,22 @@ class RetrievalSynthesisResult:
     limitations: str
     synthesis_method: str
     status: SynthesisStatus
+    failure_reason: str | None = None
+
+
+@dataclass(frozen=True)
+class RoutingDecision:
+    route: Route
+    confidence: SupportLevel
+    reason: str
+    method: RoutingMethod
+
+
+@dataclass(frozen=True)
+class IntentClassificationResult:
+    route: Route
+    confidence: SupportLevel
+    reason: str
+    method: RoutingMethod
+    status: RoutingStatus
     failure_reason: str | None = None

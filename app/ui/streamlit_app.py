@@ -6,7 +6,7 @@ from retrieval.chunker import MarkdownChunker
 from retrieval.document_store import DocumentStore
 from retrieval.retriever import KeywordRetriever
 from services.answer_service import AnswerService
-from services.router import SimpleRouter
+from services.router import RuleBasedRouter
 from structured.customer_data import CustomerDataLoader
 from structured.query_engine import StructuredQueryEngine
 
@@ -30,7 +30,7 @@ def _submit_question(answer_service: AnswerService) -> None:
 
 def run_app() -> None:
     config = build_app_config()
-    router = SimpleRouter(
+    router = RuleBasedRouter(
         retrieval_keywords=config.retrieval_keywords,
         structured_keywords=config.structured_keywords,
     )
@@ -115,6 +115,11 @@ def run_app() -> None:
             f"Support level: {response.support_level.title()} | "
             f"Synthesis: {response.synthesis_method.replace('_', ' ').title()}"
         )
+        if response.routing_reason:
+            st.caption(
+                f"Routing: {response.route} ({response.routing_method}, {response.routing_confidence} confidence) - "
+                f"{response.routing_reason}"
+            )
         if response.synthesis_status_message:
             st.caption(response.synthesis_status_message)
 

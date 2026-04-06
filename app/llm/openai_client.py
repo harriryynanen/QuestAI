@@ -2,8 +2,8 @@ import json
 
 from openai import OpenAI
 
-from llm.prompts import build_retrieval_messages
-from models import RetrievalSynthesisResult, RetrievedChunk
+from llm.prompts import build_intent_classification_messages, build_retrieval_messages
+from models import IntentClassificationResult, RetrievalSynthesisResult, RetrievedChunk
 
 
 class OpenAIRetrievalSynthesizer:
@@ -112,3 +112,85 @@ class OpenAIRetrievalSynthesizer:
         if self._client is None:
             self._client = OpenAI(api_key=self.api_key)
         return self._client
+
+    def classify_intent(
+        self,
+        question: str,
+    ) -> IntentClassificationResult:
+        if not self.enabled:
+            return IntentClassificationResult(
+                route="unknown",
+                confidence="low",
+                reason="LLM routing disabled by configuration.",
+                method="llm",
+                status="disabled",
+                failure_reason="LLM routing disabled by configuration.",
+            )
+        if not self.api_key:
+            return IntentClassificationResult(
+                route="unknown",
+                confidence="low",
+                reason="LLM routing unavailable because API key is missing.",
+                method="llm",
+                status="missing_api_key",
+                failure_reason="LLM routing unavailable: missing API key.",
+            )
+
+        try:
+            client = self._get_client()
+            response = client.responses.create(
+                model=self.model,
+                input=build_intent_classification_messages(question=question),
+                text={
+                    "format": {
+                        "type": "json_schema",
+                        "name": "intent_classification",
+                        "strict": True,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "route": {
+                                    "type": "string",
+                                    "enum": ["retrieval", "structured", "combined", "unknown"],
+                                },
+                                "confidence": {
+                                    "type": "string",
+                                    "enum": ["low", "medium", "high"],
+                                },
+                                "reason": {"type": "string"},
+                            },
+                            "required": ["route", "confidence", "reason"],
+                            "additionalProperties": False,
+                        },
+                    }
+                },
+            )
+            payload = json.loads(response.output_text)
+        except Exception:
+            return IntentClassificationResult(
+                route="unknown",
+                confidence="low",
+                reason="LLM routing unavailable because the API request failed.",
+                method="llm",
+                status="api_error",
+                failure_reason="LLM routing unavailable: API error.",
+            )
+
+        if not all(key in payload for key in ("route", "confidence", "reason")):
+            return IntentClassificationResult(
+                route="unknown",
+                confidence="low",
+                reason="LLM routing returned an invalid response.",
+                method="llm",
+                status="invalid_response",
+                failure_reason="LLM routing unavailable: invalid response format.",
+            )
+
+        return IntentClassificationResult(
+            route=str(payload["route"]),
+            confidence=str(payload["confidence"]),
+            reason=str(payload["reason"]),
+            method="llm",
+            status="success",
+            failure_reason=None,
+        )

@@ -1,9 +1,9 @@
 from llm.openai_client import OpenAIRetrievalSynthesizer
-from models import AnswerResponse, RetrievalSynthesisResult, RetrievedChunk
+from models import AnswerResponse, RetrievalSynthesisResult, RetrievedChunk, RoutingDecision
 from retrieval.chunker import MarkdownChunker
 from retrieval.document_store import DocumentStore
 from retrieval.retriever import KeywordRetriever
-from services.router import SimpleRouter
+from services.router import RuleBasedRouter, is_confident_routing_decision
 from structured.customer_data import CustomerDataLoader
 from structured.query_engine import StructuredQueryEngine
 
@@ -11,7 +11,7 @@ from structured.query_engine import StructuredQueryEngine
 class AnswerService:
     def __init__(
         self,
-        router: SimpleRouter,
+        router: RuleBasedRouter,
         document_store: DocumentStore,
         customer_data_loader: CustomerDataLoader,
         chunker: MarkdownChunker,
@@ -30,16 +30,20 @@ class AnswerService:
         self.retrieval_context_max_characters = retrieval_context_max_characters
 
     def answer_question(self, question: str) -> AnswerResponse:
-        route = self.router.classify(question)
+        routing_decision = self._route_question(question)
+        route = routing_decision.route
         dataset_info = self.customer_data_loader.get_data_info()
         dataframe = self.customer_data_loader.get_dataframe()
         dataset_file_name = self.customer_data_loader.get_dataset_file_name()
         markdown_documents = self.document_store.load_markdown_documents()
         chunks = self.chunker.chunk_documents(markdown_documents)
 
+        if route == "unknown":
+            return self._build_unclear_routing_response(routing_decision)
+
         if route == "retrieval":
             retrieved_chunks = self.retriever.retrieve(question=question, chunks=chunks)
-            return self._build_retrieval_response(question, retrieved_chunks)
+            return self._build_retrieval_response(question, retrieved_chunks, routing_decision)
 
         if route == "structured":
             structured_result = self.structured_query_engine.answer(
@@ -64,6 +68,9 @@ class AnswerService:
                 synthesis_method="deterministic",
                 synthesis_status=None,
                 synthesis_status_message=None,
+                routing_method=routing_decision.method,
+                routing_confidence=routing_decision.confidence,
+                routing_reason=routing_decision.reason,
             )
 
         sources_used = []
@@ -95,12 +102,16 @@ class AnswerService:
             synthesis_method="deterministic",
             synthesis_status=None,
             synthesis_status_message=None,
+            routing_method=routing_decision.method,
+            routing_confidence=routing_decision.confidence,
+            routing_reason=routing_decision.reason,
         )
 
     def _build_retrieval_response(
         self,
         question: str,
         retrieved_chunks: list[RetrievedChunk],
+        routing_decision: RoutingDecision,
     ) -> AnswerResponse:
         if not retrieved_chunks:
             return AnswerResponse(
@@ -121,6 +132,9 @@ class AnswerService:
                 synthesis_method="fallback",
                 synthesis_status=None,
                 synthesis_status_message="No relevant chunks found for retrieval synthesis.",
+                routing_method=routing_decision.method,
+                routing_confidence=routing_decision.confidence,
+                routing_reason=routing_decision.reason,
             )
 
         selected_chunks = self._select_retrieval_chunks(retrieved_chunks)
@@ -142,6 +156,9 @@ class AnswerService:
                 synthesis_method=llm_result.synthesis_method,
                 synthesis_status=llm_result.status,
                 synthesis_status_message=None,
+                routing_method=routing_decision.method,
+                routing_confidence=routing_decision.confidence,
+                routing_reason=routing_decision.reason,
             )
 
         fallback_result = self._build_fallback_retrieval_result(retrieved_chunks)
@@ -159,6 +176,9 @@ class AnswerService:
             synthesis_method=fallback_result.synthesis_method,
             synthesis_status=llm_result.status,
             synthesis_status_message=llm_result.failure_reason,
+            routing_method=routing_decision.method,
+            routing_confidence=routing_decision.confidence,
+            routing_reason=routing_decision.reason,
         )
 
     def _shorten_text(self, text: str, max_length: int = 180) -> str:
@@ -276,3 +296,69 @@ class AnswerService:
             ]
 
         return []
+
+    def _route_question(self, question: str) -> RoutingDecision:
+        llm_decision = self.retrieval_synthesizer.classify_intent(question)
+        if llm_decision.status == "success" and is_confident_routing_decision(llm_decision):
+            return RoutingDecision(
+                route=llm_decision.route,
+                confidence=llm_decision.confidence,
+                reason=llm_decision.reason,
+                method="llm",
+            )
+
+        rules_decision = self.router.classify(question)
+        if is_confident_routing_decision(rules_decision):
+            fallback_reason = rules_decision.reason
+            if llm_decision.status != "success":
+                fallback_reason = f"{rules_decision.reason} LLM routing fallback reason: {llm_decision.failure_reason}"
+            elif llm_decision.route == "unknown":
+                fallback_reason = f"{rules_decision.reason} LLM routing returned unknown intent."
+
+            return RoutingDecision(
+                route=rules_decision.route,
+                confidence=rules_decision.confidence,
+                reason=fallback_reason,
+                method="rules",
+            )
+
+        return RoutingDecision(
+            route="unknown",
+            confidence="low",
+            reason=(
+                "The question could not be routed confidently. "
+                "Try asking either a document question or a structured customer-data question."
+            ),
+            method="safe_fallback",
+        )
+
+    def _build_unclear_routing_response(
+        self,
+        routing_decision: RoutingDecision,
+    ) -> AnswerResponse:
+        return AnswerResponse(
+            answer=(
+                "I could not route this question confidently to the document path or the structured data path."
+            ),
+            sources_used=[],
+            support_level="low",
+            limitations=(
+                "Try asking either a document-focused question such as 'What does the policy say about tax arrears?' "
+                "or a structured-data question such as 'What is Harbor Foods Demo Oy's equity ratio?'"
+            ),
+            route="unknown",
+            retrieved_chunks=[],
+            follow_up_questions=[
+                "What does the policy say about tax arrears?",
+                "Which customers have tax arrears?",
+                "What is Harbor Foods Demo Oy's equity ratio?",
+            ],
+            matched_customer_name=None,
+            matched_field_name=None,
+            synthesis_method="deterministic",
+            synthesis_status=None,
+            synthesis_status_message=None,
+            routing_method=routing_decision.method,
+            routing_confidence=routing_decision.confidence,
+            routing_reason=routing_decision.reason,
+        )

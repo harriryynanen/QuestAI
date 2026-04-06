@@ -1,7 +1,7 @@
-from models import Route
+from models import Route, RoutingDecision
 
 
-class SimpleRouter:
+class RuleBasedRouter:
     DOCUMENT_INTENT_PHRASES = (
         "what does the policy say",
         "what does the guide say",
@@ -80,7 +80,7 @@ class SimpleRouter:
         self.retrieval_keywords = retrieval_keywords
         self.structured_keywords = structured_keywords
 
-    def classify(self, question: str) -> Route:
+    def classify(self, question: str) -> RoutingDecision:
         normalized_question = question.lower()
 
         document_first = self._is_document_first_question(normalized_question)
@@ -90,18 +90,53 @@ class SimpleRouter:
         matches_structured = any(keyword in normalized_question for keyword in self.structured_keywords)
 
         if combined:
-            return "combined"
+            return RoutingDecision(
+                route="combined",
+                confidence="medium",
+                reason="Rule-based router detected explicit cross-source wording.",
+                method="rules",
+            )
         if document_first:
-            return "retrieval"
+            return RoutingDecision(
+                route="retrieval",
+                confidence="high",
+                reason="Rule-based router detected document-first intent.",
+                method="rules",
+            )
         if structured_first:
-            return "structured"
+            return RoutingDecision(
+                route="structured",
+                confidence="high",
+                reason="Rule-based router detected structured data intent.",
+                method="rules",
+            )
         if matches_retrieval and not matches_structured:
-            return "retrieval"
+            return RoutingDecision(
+                route="retrieval",
+                confidence="medium",
+                reason="Rule-based router found retrieval-oriented keywords.",
+                method="rules",
+            )
         if matches_structured and not matches_retrieval:
-            return "structured"
+            return RoutingDecision(
+                route="structured",
+                confidence="medium",
+                reason="Rule-based router found structured-data keywords.",
+                method="rules",
+            )
         if matches_retrieval and matches_structured:
-            return "retrieval"
-        return "retrieval"
+            return RoutingDecision(
+                route="retrieval",
+                confidence="low",
+                reason="Rule-based router found mixed keywords and defaulted to the more useful single-source retrieval path.",
+                method="rules",
+            )
+        return RoutingDecision(
+            route="unknown",
+            confidence="low",
+            reason="Rule-based router could not route the question confidently.",
+            method="rules",
+        )
 
     def _is_document_first_question(self, question: str) -> bool:
         if any(phrase in question for phrase in self.DOCUMENT_INTENT_PHRASES):
@@ -137,3 +172,7 @@ class SimpleRouter:
             and any(keyword in question for keyword in self.DOCUMENT_CONTEXT_KEYWORDS)
         )
         return has_combined_phrase or asks_fit_view
+
+
+def is_confident_routing_decision(decision: RoutingDecision) -> bool:
+    return decision.route != "unknown" and decision.confidence in {"medium", "high"}
