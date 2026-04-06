@@ -22,9 +22,25 @@ class OpenAIRetrievalSynthesizer:
         self,
         question: str,
         retrieved_chunks: list[RetrievedChunk],
-    ) -> RetrievalSynthesisResult | None:
-        if not self.enabled or not self.api_key:
-            return None
+    ) -> RetrievalSynthesisResult:
+        if not self.enabled:
+            return RetrievalSynthesisResult(
+                answer="",
+                support_level="low",
+                limitations="",
+                synthesis_method="fallback",
+                status="disabled",
+                failure_reason="LLM synthesis disabled by configuration.",
+            )
+        if not self.api_key:
+            return RetrievalSynthesisResult(
+                answer="",
+                support_level="low",
+                limitations="",
+                synthesis_method="fallback",
+                status="missing_api_key",
+                failure_reason="LLM synthesis unavailable: missing API key.",
+            )
 
         try:
             client = self._get_client()
@@ -54,17 +70,43 @@ class OpenAIRetrievalSynthesizer:
             )
             payload = json.loads(response.output_text)
         except Exception:
-            return None
+            return RetrievalSynthesisResult(
+                answer="",
+                support_level="low",
+                limitations="",
+                synthesis_method="fallback",
+                status="api_error",
+                failure_reason="LLM synthesis unavailable: API error.",
+            )
+
+        if not all(key in payload for key in ("answer", "support_level", "limitations")):
+            return RetrievalSynthesisResult(
+                answer="",
+                support_level="low",
+                limitations="",
+                synthesis_method="fallback",
+                status="invalid_response",
+                failure_reason="LLM synthesis unavailable: invalid response format.",
+            )
 
         return RetrievalSynthesisResult(
             answer=str(payload["answer"]),
             support_level=str(payload["support_level"]),
             limitations=str(payload["limitations"]),
             synthesis_method="llm",
+            status="success",
+            failure_reason=None,
         )
 
     def is_available(self) -> bool:
         return self.enabled and bool(self.api_key)
+
+    def get_status(self) -> tuple[str, str]:
+        if not self.enabled:
+            return "disabled", "LLM synthesis disabled by configuration."
+        if not self.api_key:
+            return "missing_api_key", "LLM synthesis unavailable: missing API key."
+        return "success", "OpenAI retrieval synthesis available."
 
     def _get_client(self) -> OpenAI:
         if self._client is None:

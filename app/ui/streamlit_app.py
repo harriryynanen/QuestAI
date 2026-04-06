@@ -68,6 +68,7 @@ def run_app() -> None:
     st.title(config.app_title)
     st.write(config.app_description)
 
+    synthesis_status_code, synthesis_status_message = retrieval_synthesizer.get_status()
     retrieval_status = "OpenAI available" if retrieval_synthesizer.is_available() else "Fallback mode"
     with st.container():
         st.subheader("Status")
@@ -78,6 +79,8 @@ def run_app() -> None:
             f"Chunks: {len(chunks)} | "
             f"CSV: {dataset_info.file_name if dataset_info.dataset_found and dataset_info.file_name else 'Not loaded'}"
         )
+        if synthesis_status_code != "success":
+            st.caption(synthesis_status_message)
 
     with st.container():
         st.subheader("Ask A Question")
@@ -107,14 +110,13 @@ def run_app() -> None:
         st.subheader("Answer")
         st.write(response.answer)
 
-        st.subheader("Route")
-        st.code(response.route)
-
-        st.subheader("Support Level")
-        st.write(response.support_level.title())
-
-        st.subheader("Synthesis")
-        st.write(response.synthesis_method.replace("_", " ").title())
+        st.caption(
+            f"Route: {response.route} | "
+            f"Support level: {response.support_level.title()} | "
+            f"Synthesis: {response.synthesis_method.replace('_', ' ').title()}"
+        )
+        if response.synthesis_status_message:
+            st.caption(response.synthesis_status_message)
 
         st.subheader("Sources Used")
         if response.sources_used:
@@ -131,12 +133,13 @@ def run_app() -> None:
                     st.write(f"Matched field: {response.matched_field_name}")
 
         if response.retrieved_chunks:
-            with st.expander("Retrieved Chunks", expanded=False):
+            with st.expander("Retrieved Evidence", expanded=False):
                 for item in response.retrieved_chunks:
                     heading = item.chunk.section_heading or "No heading"
                     st.write(
-                        f"- {item.chunk.file_name} | {heading} | score={item.score} | terms={', '.join(item.matched_terms)}"
+                        f"- {item.chunk.file_name} -- {heading} | {item.chunk.chunk_id} | score={item.score:.1f}"
                     )
+                    st.caption(item.match_summary)
                     st.caption(item.chunk.text)
 
         st.subheader("Limitations")

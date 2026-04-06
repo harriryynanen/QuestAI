@@ -5,6 +5,7 @@ from typing import Literal
 
 Route = Literal["retrieval", "structured", "combined"]
 SupportLevel = Literal["low", "medium", "high"]
+SynthesisStatus = Literal["success", "missing_api_key", "disabled", "api_error", "invalid_response"]
 
 
 @dataclass(frozen=True)
@@ -19,6 +20,8 @@ class AnswerResponse:
     matched_customer_name: str | None = None
     matched_field_name: str | None = None
     synthesis_method: str = "deterministic"
+    synthesis_status: SynthesisStatus | None = None
+    synthesis_status_message: str | None = None
 
 
 @dataclass(frozen=True)
@@ -57,8 +60,9 @@ class DocumentChunk:
 @dataclass(frozen=True)
 class RetrievedChunk:
     chunk: DocumentChunk
-    score: int
+    score: float
     matched_terms: list[str]
+    match_summary: str
 
 
 @dataclass(frozen=True)
@@ -77,3 +81,5 @@ class RetrievalSynthesisResult:
     support_level: SupportLevel
     limitations: str
     synthesis_method: str
+    status: SynthesisStatus
+    failure_reason: str | None = None

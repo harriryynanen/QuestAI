@@ -62,6 +62,8 @@ class AnswerService:
                 matched_customer_name=structured_result.matched_customer_name,
                 matched_field_name=structured_result.matched_field_name,
                 synthesis_method="deterministic",
+                synthesis_status=None,
+                synthesis_status_message=None,
             )
 
         sources_used = []
@@ -91,6 +93,8 @@ class AnswerService:
             matched_customer_name=None,
             matched_field_name=None,
             synthesis_method="deterministic",
+            synthesis_status=None,
+            synthesis_status_message=None,
         )
 
     def _build_retrieval_response(
@@ -115,14 +119,16 @@ class AnswerService:
                 matched_customer_name=None,
                 matched_field_name=None,
                 synthesis_method="fallback",
+                synthesis_status=None,
+                synthesis_status_message="No relevant chunks found for retrieval synthesis.",
             )
 
-        selected_chunks = self._trim_retrieved_chunks(retrieved_chunks)
+        selected_chunks = self._select_retrieval_chunks(retrieved_chunks)
         llm_result = self.retrieval_synthesizer.synthesize_retrieval_answer(
             question=question,
             retrieved_chunks=selected_chunks,
         )
-        if llm_result is not None:
+        if llm_result.status == "success":
             return AnswerResponse(
                 answer=llm_result.answer,
                 sources_used=self._build_chunk_sources(selected_chunks),
@@ -134,6 +140,8 @@ class AnswerService:
                 matched_customer_name=None,
                 matched_field_name=None,
                 synthesis_method=llm_result.synthesis_method,
+                synthesis_status=llm_result.status,
+                synthesis_status_message=None,
             )
 
         fallback_result = self._build_fallback_retrieval_result(retrieved_chunks)
@@ -149,6 +157,8 @@ class AnswerService:
             matched_customer_name=None,
             matched_field_name=None,
             synthesis_method=fallback_result.synthesis_method,
+            synthesis_status=llm_result.status,
+            synthesis_status_message=llm_result.failure_reason,
         )
 
     def _shorten_text(self, text: str, max_length: int = 180) -> str:
@@ -188,21 +198,28 @@ class AnswerService:
             support_level=support_level,
             limitations=limitations,
             synthesis_method="fallback",
+            status="success",
+            failure_reason=None,
         )
 
     def _build_chunk_sources(self, retrieved_chunks: list[RetrievedChunk]) -> list[str]:
         return [
-            f"{item.chunk.file_name} | {item.chunk.section_heading or 'No heading'} | {item.chunk.chunk_id}"
+            f"{item.chunk.file_name} -- {item.chunk.section_heading or 'No heading'}"
             for item in retrieved_chunks
         ]
 
-    def _trim_retrieved_chunks(
+    def _select_retrieval_chunks(
         self,
         retrieved_chunks: list[RetrievedChunk],
     ) -> list[RetrievedChunk]:
+        top_score = retrieved_chunks[0].score
+        quality_floor = max(top_score * 0.55, 4.0)
+
         total_characters = 0
         selected_chunks: list[RetrievedChunk] = []
         for item in retrieved_chunks:
+            if item.score < quality_floor:
+                continue
             chunk_length = len(item.chunk.text)
             if (
                 selected_chunks
@@ -211,7 +228,13 @@ class AnswerService:
                 break
             selected_chunks.append(item)
             total_characters += chunk_length
-        return selected_chunks
+            if len(selected_chunks) >= 3:
+                break
+
+        if selected_chunks:
+            return selected_chunks
+
+        return retrieved_chunks[:2]
 
     def _get_follow_up_questions(
         self,
