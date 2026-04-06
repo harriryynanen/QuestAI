@@ -1,5 +1,6 @@
 import streamlit as st
 
+from llm.openai_client import OpenAIRetrievalSynthesizer
 from config import DEFAULT_CONFIG
 from retrieval.chunker import MarkdownChunker
 from retrieval.document_store import DocumentStore
@@ -19,6 +20,10 @@ def run_app() -> None:
     document_store = DocumentStore(docs_path=config.docs_path)
     chunker = MarkdownChunker(max_characters=config.markdown_chunk_max_characters)
     retriever = KeywordRetriever(top_k=config.retrieval_top_k)
+    retrieval_synthesizer = OpenAIRetrievalSynthesizer(
+        model=config.openai_model,
+        enabled=config.llm_enabled_for_retrieval,
+    )
     customer_data_loader = CustomerDataLoader(
         structured_data_path=config.structured_data_path
     )
@@ -30,6 +35,8 @@ def run_app() -> None:
         chunker=chunker,
         retriever=retriever,
         structured_query_engine=structured_query_engine,
+        retrieval_synthesizer=retrieval_synthesizer,
+        retrieval_context_max_characters=config.retrieval_context_max_characters,
     )
     documents = document_store.list_documents()
     markdown_documents = document_store.load_markdown_documents()
@@ -55,6 +62,10 @@ def run_app() -> None:
 
     st.write(f"Loaded markdown documents: {len(markdown_documents)}")
     st.write(f"Generated markdown chunks: {len(chunks)}")
+    st.write(
+        "Retrieval synthesis: "
+        f"{'OpenAI available' if retrieval_synthesizer.is_available() else 'Fallback mode'}"
+    )
 
     st.write(f"Structured data folder: `{config.structured_data_path}`")
     if dataset_info.dataset_found and dataset_info.file_name is not None:
@@ -87,6 +98,9 @@ def run_app() -> None:
 
         st.subheader("Support Level")
         st.write(response.support_level.title())
+
+        st.subheader("Synthesis")
+        st.write(response.synthesis_method.replace("_", " ").title())
 
         st.subheader("Sources Used")
         if response.sources_used:

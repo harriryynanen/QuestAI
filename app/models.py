@@ -17,6 +17,7 @@ class AnswerResponse:
     retrieved_chunks: list["RetrievedChunk"]
     matched_customer_name: str | None = None
     matched_field_name: str | None = None
+    synthesis_method: str = "deterministic"
 
 
 @dataclass(frozen=True)
@@ -67,3 +68,11 @@ class StructuredQueryResult:
     limitations: str
     matched_customer_name: str | None
     matched_field_name: str | None
+
+
+@dataclass(frozen=True)
+class RetrievalSynthesisResult:
+    answer: str
+    support_level: SupportLevel
+    limitations: str
+    synthesis_method: str

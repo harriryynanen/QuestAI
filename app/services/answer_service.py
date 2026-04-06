@@ -1,4 +1,5 @@
-from models import AnswerResponse, RetrievedChunk
+from llm.openai_client import OpenAIRetrievalSynthesizer
+from models import AnswerResponse, RetrievalSynthesisResult, RetrievedChunk
 from retrieval.chunker import MarkdownChunker
 from retrieval.document_store import DocumentStore
 from retrieval.retriever import KeywordRetriever
@@ -16,6 +17,8 @@ class AnswerService:
         chunker: MarkdownChunker,
         retriever: KeywordRetriever,
         structured_query_engine: StructuredQueryEngine,
+        retrieval_synthesizer: OpenAIRetrievalSynthesizer,
+        retrieval_context_max_characters: int,
     ) -> None:
         self.router = router
         self.document_store = document_store
@@ -23,6 +26,8 @@ class AnswerService:
         self.chunker = chunker
         self.retriever = retriever
         self.structured_query_engine = structured_query_engine
+        self.retrieval_synthesizer = retrieval_synthesizer
+        self.retrieval_context_max_characters = retrieval_context_max_characters
 
     def answer_question(self, question: str) -> AnswerResponse:
         route = self.router.classify(question)
@@ -34,7 +39,7 @@ class AnswerService:
 
         if route == "retrieval":
             retrieved_chunks = self.retriever.retrieve(question=question, chunks=chunks)
-            return self._build_retrieval_response(retrieved_chunks)
+            return self._build_retrieval_response(question, retrieved_chunks)
 
         if route == "structured":
             structured_result = self.structured_query_engine.answer(
@@ -51,6 +56,7 @@ class AnswerService:
                 retrieved_chunks=[],
                 matched_customer_name=structured_result.matched_customer_name,
                 matched_field_name=structured_result.matched_field_name,
+                synthesis_method="deterministic",
             )
 
         sources_used = []
@@ -76,10 +82,14 @@ class AnswerService:
             ),
             route=route,
             retrieved_chunks=[],
+            matched_customer_name=None,
+            matched_field_name=None,
+            synthesis_method="deterministic",
         )
 
     def _build_retrieval_response(
         self,
+        question: str,
         retrieved_chunks: list[RetrievedChunk],
     ) -> AnswerResponse:
         if not retrieved_chunks:
@@ -97,40 +107,39 @@ class AnswerService:
                 retrieved_chunks=[],
                 matched_customer_name=None,
                 matched_field_name=None,
+                synthesis_method="fallback",
             )
 
-        top_score = retrieved_chunks[0].score
-        support_level = "high" if top_score >= 3 else "medium" if top_score == 2 else "low"
-
-        excerpts = []
-        sources_used = []
-        for item in retrieved_chunks:
-            heading = item.chunk.section_heading or "No heading"
-            excerpt = self._shorten_text(item.chunk.text)
-            excerpts.append(
-                f"- {item.chunk.file_name} | {heading}: {excerpt}"
-            )
-            sources_used.append(f"{item.chunk.file_name} | {heading}")
-
-        answer = "\n".join(
-            [
-                "Relevant markdown guidance was found in the demo documents.",
-                "These excerpts are source-grounded and should be treated as preliminary guidance only:",
-                *excerpts,
-            ]
+        selected_chunks = self._trim_retrieved_chunks(retrieved_chunks)
+        llm_result = self.retrieval_synthesizer.synthesize_retrieval_answer(
+            question=question,
+            retrieved_chunks=selected_chunks,
         )
+        if llm_result is not None:
+            return AnswerResponse(
+                answer=llm_result.answer,
+                sources_used=self._build_chunk_sources(selected_chunks),
+                support_level=llm_result.support_level,
+                limitations=llm_result.limitations,
+                route="retrieval",
+                retrieved_chunks=selected_chunks,
+                matched_customer_name=None,
+                matched_field_name=None,
+                synthesis_method=llm_result.synthesis_method,
+            )
+
+        fallback_result = self._build_fallback_retrieval_result(retrieved_chunks)
 
         return AnswerResponse(
-            answer=answer,
-            sources_used=sources_used,
-            support_level=support_level,
-            limitations=(
-                "This is a lightweight retrieval step based on keyword overlap, not a final decision or full reasoning system."
-            ),
+            answer=fallback_result.answer,
+            sources_used=self._build_chunk_sources(retrieved_chunks),
+            support_level=fallback_result.support_level,
+            limitations=fallback_result.limitations,
             route="retrieval",
             retrieved_chunks=retrieved_chunks,
             matched_customer_name=None,
             matched_field_name=None,
+            synthesis_method=fallback_result.synthesis_method,
         )
 
     def _shorten_text(self, text: str, max_length: int = 180) -> str:
@@ -138,3 +147,59 @@ class AnswerService:
         if len(shortened) <= max_length:
             return shortened
         return f"{shortened[: max_length - 3].rstrip()}..."
+
+    def _build_fallback_retrieval_result(
+        self,
+        retrieved_chunks: list[RetrievedChunk],
+    ) -> RetrievalSynthesisResult:
+        top_score = retrieved_chunks[0].score
+        support_level = "high" if top_score >= 3 else "medium" if top_score == 2 else "low"
+
+        excerpts = []
+        for item in retrieved_chunks:
+            heading = item.chunk.section_heading or "No heading"
+            excerpt = self._shorten_text(item.chunk.text)
+            excerpts.append(f"- {item.chunk.file_name} | {heading}: {excerpt}")
+
+        answer = "\n".join(
+            [
+                "Relevant markdown guidance was found in the demo documents.",
+                "This answer is using a fallback summary based on retrieved chunks:",
+                *excerpts,
+            ]
+        )
+
+        limitations = (
+            "This answer is based only on retrieved markdown chunks. "
+            "LLM synthesis was unavailable, so the app returned a deterministic fallback summary instead."
+        )
+
+        return RetrievalSynthesisResult(
+            answer=answer,
+            support_level=support_level,
+            limitations=limitations,
+            synthesis_method="fallback",
+        )
+
+    def _build_chunk_sources(self, retrieved_chunks: list[RetrievedChunk]) -> list[str]:
+        return [
+            f"{item.chunk.file_name} | {item.chunk.section_heading or 'No heading'} | {item.chunk.chunk_id}"
+            for item in retrieved_chunks
+        ]
+
+    def _trim_retrieved_chunks(
+        self,
+        retrieved_chunks: list[RetrievedChunk],
+    ) -> list[RetrievedChunk]:
+        total_characters = 0
+        selected_chunks: list[RetrievedChunk] = []
+        for item in retrieved_chunks:
+            chunk_length = len(item.chunk.text)
+            if (
+                selected_chunks
+                and total_characters + chunk_length > self.retrieval_context_max_characters
+            ):
+                break
+            selected_chunks.append(item)
+            total_characters += chunk_length
+        return selected_chunks
