@@ -54,6 +54,11 @@ class AnswerService:
                 limitations=structured_result.limitations,
                 route="structured",
                 retrieved_chunks=[],
+                follow_up_questions=self._get_follow_up_questions(
+                    route="structured",
+                    matched_customer_name=structured_result.matched_customer_name,
+                    matched_field_name=structured_result.matched_field_name,
+                ),
                 matched_customer_name=structured_result.matched_customer_name,
                 matched_field_name=structured_result.matched_field_name,
                 synthesis_method="deterministic",
@@ -82,6 +87,7 @@ class AnswerService:
             ),
             route=route,
             retrieved_chunks=[],
+            follow_up_questions=self._get_follow_up_questions(route="combined"),
             matched_customer_name=None,
             matched_field_name=None,
             synthesis_method="deterministic",
@@ -105,6 +111,7 @@ class AnswerService:
                 ),
                 route="retrieval",
                 retrieved_chunks=[],
+                follow_up_questions=self._get_follow_up_questions(route="retrieval"),
                 matched_customer_name=None,
                 matched_field_name=None,
                 synthesis_method="fallback",
@@ -123,6 +130,7 @@ class AnswerService:
                 limitations=llm_result.limitations,
                 route="retrieval",
                 retrieved_chunks=selected_chunks,
+                follow_up_questions=self._get_follow_up_questions(route="retrieval"),
                 matched_customer_name=None,
                 matched_field_name=None,
                 synthesis_method=llm_result.synthesis_method,
@@ -137,6 +145,7 @@ class AnswerService:
             limitations=fallback_result.limitations,
             route="retrieval",
             retrieved_chunks=retrieved_chunks,
+            follow_up_questions=self._get_follow_up_questions(route="retrieval"),
             matched_customer_name=None,
             matched_field_name=None,
             synthesis_method=fallback_result.synthesis_method,
@@ -203,3 +212,44 @@ class AnswerService:
             selected_chunks.append(item)
             total_characters += chunk_length
         return selected_chunks
+
+    def _get_follow_up_questions(
+        self,
+        route: str,
+        matched_customer_name: str | None = None,
+        matched_field_name: str | None = None,
+    ) -> list[str]:
+        if route == "retrieval":
+            return [
+                "What does the policy say about payment delays?",
+                "What are the basic screening criteria for FlexLine Demo?",
+                "What guidance is given about missing financial statements?",
+            ]
+
+        if route == "structured":
+            if matched_customer_name:
+                return [
+                    f"What is the debt to EBITDA of {matched_customer_name}?",
+                    f"Does {matched_customer_name} have tax arrears?",
+                    f"What product is {matched_customer_name} interested in?",
+                ]
+            if matched_field_name == "latest_revenue_eur":
+                return [
+                    "Which customer has the lowest turnover?",
+                    "Which customer has the highest EBITDA?",
+                    "Which customers have repeated payment delays?",
+                ]
+            return [
+                "Which customer has the highest turnover?",
+                "Which customers have tax arrears?",
+                "Which customers are interested in AssetGrow Demo?",
+            ]
+
+        if route == "combined":
+            return [
+                "What does the policy say about tax arrears?",
+                "Which customers have tax arrears?",
+                "What is Harbor Foods Demo Oy's equity ratio?",
+            ]
+
+        return []

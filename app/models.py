@@ -15,6 +15,7 @@ class AnswerResponse:
     limitations: str
     route: Route
     retrieved_chunks: list["RetrievedChunk"]
+    follow_up_questions: list[str]
     matched_customer_name: str | None = None
     matched_field_name: str | None = None
     synthesis_method: str = "deterministic"

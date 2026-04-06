@@ -1,5 +1,4 @@
 import json
-import os
 
 from openai import OpenAI
 
@@ -8,10 +7,15 @@ from models import RetrievalSynthesisResult, RetrievedChunk
 
 
 class OpenAIRetrievalSynthesizer:
-    def __init__(self, model: str, enabled: bool = True) -> None:
+    def __init__(
+        self,
+        model: str,
+        enabled: bool = True,
+        api_key: str | None = None,
+    ) -> None:
         self.model = model
         self.enabled = enabled
-        self.api_key = os.getenv("OPENAI_API_KEY")
+        self.api_key = api_key
         self._client: OpenAI | None = None
 
     def synthesize_retrieval_answer(
