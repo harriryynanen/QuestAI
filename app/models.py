@@ -14,6 +14,7 @@ class AnswerResponse:
     support_level: SupportLevel
     limitations: str
     route: Route
+    retrieved_chunks: list["RetrievedChunk"]
 
 
 @dataclass(frozen=True)
@@ -30,3 +31,27 @@ class StructuredDataInfo:
     file_name: str | None
     row_count: int | None
     column_names: list[str]
+
+
+@dataclass(frozen=True)
+class DocumentRecord:
+    document_id: str
+    file_name: str
+    path: Path
+    text: str
+
+
+@dataclass(frozen=True)
+class DocumentChunk:
+    chunk_id: str
+    document_id: str
+    file_name: str
+    text: str
+    section_heading: str | None
+
+
+@dataclass(frozen=True)
+class RetrievedChunk:
+    chunk: DocumentChunk
+    score: int
+    matched_terms: list[str]

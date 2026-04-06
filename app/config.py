@@ -7,6 +7,8 @@ class AppConfig:
     project_root: Path
     docs_path: Path
     structured_data_path: Path
+    markdown_chunk_max_characters: int = 400
+    retrieval_top_k: int = 3
     app_title: str = "Business Q&A Assistant"
     app_description: str = (
         "Ask a question about a fictional business banking advisory scenario. "

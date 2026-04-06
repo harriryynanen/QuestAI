@@ -19,20 +19,25 @@ streamlit run app/main.py
 
 ## Current scope
 
-This stage validates file discovery and loading readiness for manually added source files. The question flow still uses simple routing and placeholder answer generation.
+This stage adds the first real markdown retrieval foundation. The app can now load repository markdown files, split them into lightweight chunks, and retrieve relevant passages with simple keyword overlap. CSV loading is available, but structured question answering is not implemented yet.
 
-## Add your files
+## Included demo data
 
-Place synthetic internal documents in `data/docs/`.
+The repository now includes demo markdown documents in `data/docs/` and a demo CSV in `data/structured/`.
 
-Supported document types for this stage:
+Supported document discovery types:
 - `.md`
 - `.txt`
 - `.pdf`
 
-Place one synthetic CSV dataset in `data/structured/`.
+Current retrieval content path:
+- `.md` only
 
-Supported structured file type for this stage:
+Supported structured file type for loading:
 - `.csv`
 
-No demo data is included. Add the files manually when you are ready to test discovery and loading.
+## Current behavior
+
+- Retrieval questions use markdown-only chunk retrieval with deterministic keyword matching.
+- Structured and combined routes still return placeholder answers.
+- Answers are still partially placeholder-based and should be treated as preliminary demo output, not decisions.

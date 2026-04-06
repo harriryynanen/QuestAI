@@ -1,7 +1,9 @@
 import streamlit as st
 
 from config import DEFAULT_CONFIG
+from retrieval.chunker import MarkdownChunker
 from retrieval.document_store import DocumentStore
+from retrieval.retriever import KeywordRetriever
 from services.answer_service import AnswerService
 from services.router import SimpleRouter
 from structured.customer_data import CustomerDataLoader
@@ -14,6 +16,8 @@ def run_app() -> None:
         structured_keywords=config.structured_keywords,
     )
     document_store = DocumentStore(docs_path=config.docs_path)
+    chunker = MarkdownChunker(max_characters=config.markdown_chunk_max_characters)
+    retriever = KeywordRetriever(top_k=config.retrieval_top_k)
     customer_data_loader = CustomerDataLoader(
         structured_data_path=config.structured_data_path
     )
@@ -21,8 +25,12 @@ def run_app() -> None:
         router=router,
         document_store=document_store,
         customer_data_loader=customer_data_loader,
+        chunker=chunker,
+        retriever=retriever,
     )
     documents = document_store.list_documents()
+    markdown_documents = document_store.load_markdown_documents()
+    chunks = chunker.chunk_documents(markdown_documents)
     dataset_info = customer_data_loader.get_data_info()
 
     st.set_page_config(page_title=config.app_title, layout="centered")
@@ -41,6 +49,9 @@ def run_app() -> None:
         st.info(
             "No supported documents found in data/docs/. Supported types: .md, .txt, .pdf."
         )
+
+    st.write(f"Loaded markdown documents: {len(markdown_documents)}")
+    st.write(f"Generated markdown chunks: {len(chunks)}")
 
     st.write(f"Structured data folder: `{config.structured_data_path}`")
     if dataset_info.dataset_found and dataset_info.file_name is not None:
@@ -79,7 +90,16 @@ def run_app() -> None:
             for source in response.sources_used:
                 st.write(f"- {source}")
         else:
-            st.write("No sources used in this placeholder slice.")
+            st.write("No sources were used for this answer.")
+
+        if response.retrieved_chunks:
+            st.subheader("Retrieved Chunks")
+            for item in response.retrieved_chunks:
+                heading = item.chunk.section_heading or "No heading"
+                st.write(
+                    f"- {item.chunk.file_name} | {heading} | score={item.score} | terms={', '.join(item.matched_terms)}"
+                )
+                st.caption(item.chunk.text)
 
         st.subheader("Limitations")
         st.write(response.limitations)
