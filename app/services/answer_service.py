@@ -1,10 +1,19 @@
 from llm.openai_client import OpenAIRetrievalSynthesizer
-from models import AnswerResponse, RetrievalSynthesisResult, RetrievedChunk, RoutingDecision
+from models import (
+    AnswerResponse,
+    CombinedEvidence,
+    RetrievalSynthesisResult,
+    RetrievedChunk,
+    RoutingDecision,
+    SemanticPlanningResult,
+    SemanticQueryPlan,
+)
 from retrieval.chunker import MarkdownChunker
 from retrieval.document_store import DocumentStore
 from retrieval.retriever import KeywordRetriever
 from services.router import RuleBasedRouter, is_confident_routing_decision
 from structured.customer_data import CustomerDataLoader
+from structured.planner import StructuredQueryPlanner
 from structured.query_engine import StructuredQueryEngine
 
 
@@ -18,6 +27,7 @@ class AnswerService:
         retriever: KeywordRetriever,
         structured_query_engine: StructuredQueryEngine,
         retrieval_synthesizer: OpenAIRetrievalSynthesizer,
+        structured_query_planner: StructuredQueryPlanner,
         retrieval_context_max_characters: int,
     ) -> None:
         self.router = router
@@ -27,16 +37,19 @@ class AnswerService:
         self.retriever = retriever
         self.structured_query_engine = structured_query_engine
         self.retrieval_synthesizer = retrieval_synthesizer
+        self.structured_query_planner = structured_query_planner
         self.retrieval_context_max_characters = retrieval_context_max_characters
 
     def answer_question(self, question: str) -> AnswerResponse:
-        routing_decision = self._route_question(question)
+        planning_result = self.structured_query_planner.plan(question)
+        routing_decision = self._route_question(question, planning_result)
         route = routing_decision.route
         dataset_info = self.customer_data_loader.get_data_info()
         dataframe = self.customer_data_loader.get_dataframe()
         dataset_file_name = self.customer_data_loader.get_dataset_file_name()
         markdown_documents = self.document_store.load_markdown_documents()
         chunks = self.chunker.chunk_documents(markdown_documents)
+        semantic_plan = planning_result.plan if planning_result.status == "success" else None
 
         if route == "unknown":
             return self._build_unclear_routing_response(routing_decision)
@@ -50,7 +63,15 @@ class AnswerService:
                 question=question,
                 dataframe=dataframe,
                 dataset_file_name=dataset_file_name,
+                plan=semantic_plan,
             )
+            planning_reason = structured_result.planning_reason
+            if planning_result.status != "success":
+                planning_reason = (
+                    f"{structured_result.planning_reason} Planner fallback reason: {planning_result.failure_reason}"
+                    if structured_result.planning_reason
+                    else planning_result.failure_reason
+                )
             return AnswerResponse(
                 answer=structured_result.answer,
                 sources_used=structured_result.sources_used,
@@ -71,40 +92,19 @@ class AnswerService:
                 routing_method=routing_decision.method,
                 routing_confidence=routing_decision.confidence,
                 routing_reason=routing_decision.reason,
+                planning_method=structured_result.planning_method,
+                planning_reason=planning_reason,
             )
 
-        sources_used = []
-        if dataset_info.dataset_found and dataset_info.file_name is not None:
-            sources_used.append(dataset_info.file_name)
-        if markdown_documents:
-            sources_used.extend(document.file_name for document in markdown_documents)
-        if not sources_used:
-            sources_used.append(
-                "No detected source files yet. Add markdown documents or a CSV dataset to the data folders."
-            )
-
-        return AnswerResponse(
-            answer=(
-                "This question appears to need both document guidance and structured data. "
-                "Combined reasoning is not implemented yet in this demo."
-            ),
-            sources_used=sources_used,
-            support_level="low",
-            limitations=(
-                "Markdown retrieval and deterministic CSV querying are available separately, "
-                "but the system does not yet synthesize them into one grounded combined answer."
-            ),
-            route=route,
-            retrieved_chunks=[],
-            follow_up_questions=self._get_follow_up_questions(route="combined"),
-            matched_customer_name=None,
-            matched_field_name=None,
-            synthesis_method="deterministic",
-            synthesis_status=None,
-            synthesis_status_message=None,
-            routing_method=routing_decision.method,
-            routing_confidence=routing_decision.confidence,
-            routing_reason=routing_decision.reason,
+        return self._build_combined_response(
+            question=question,
+            routing_decision=routing_decision,
+            planning_result=planning_result,
+            semantic_plan=semantic_plan,
+            chunks=chunks,
+            dataframe=dataframe,
+            dataset_file_name=dataset_file_name,
+            dataset_info_file_name=dataset_info.file_name if dataset_info.dataset_found else None,
         )
 
     def _build_retrieval_response(
@@ -135,6 +135,8 @@ class AnswerService:
                 routing_method=routing_decision.method,
                 routing_confidence=routing_decision.confidence,
                 routing_reason=routing_decision.reason,
+                planning_method=None,
+                planning_reason=None,
             )
 
         selected_chunks = self._select_retrieval_chunks(retrieved_chunks)
@@ -159,6 +161,8 @@ class AnswerService:
                 routing_method=routing_decision.method,
                 routing_confidence=routing_decision.confidence,
                 routing_reason=routing_decision.reason,
+                planning_method=None,
+                planning_reason=None,
             )
 
         fallback_result = self._build_fallback_retrieval_result(retrieved_chunks)
@@ -179,6 +183,8 @@ class AnswerService:
             routing_method=routing_decision.method,
             routing_confidence=routing_decision.confidence,
             routing_reason=routing_decision.reason,
+            planning_method=None,
+            planning_reason=None,
         )
 
     def _shorten_text(self, text: str, max_length: int = 180) -> str:
@@ -297,23 +303,45 @@ class AnswerService:
 
         return []
 
-    def _route_question(self, question: str) -> RoutingDecision:
-        llm_decision = self.retrieval_synthesizer.classify_intent(question)
-        if llm_decision.status == "success" and is_confident_routing_decision(llm_decision):
+    def _route_question(
+        self,
+        question: str,
+        planning_result: SemanticPlanningResult,
+    ) -> RoutingDecision:
+        semantic_plan = planning_result.plan
+        if (
+            planning_result.status == "success"
+            and is_confident_routing_decision(
+                RoutingDecision(
+                    route=semantic_plan.route,
+                    confidence=semantic_plan.confidence,
+                    reason=semantic_plan.reason,
+                    method="llm",
+                )
+            )
+        ):
             return RoutingDecision(
-                route=llm_decision.route,
-                confidence=llm_decision.confidence,
-                reason=llm_decision.reason,
+                route=semantic_plan.route,
+                confidence=semantic_plan.confidence,
+                reason=semantic_plan.reason,
                 method="llm",
             )
 
         rules_decision = self.router.classify(question)
         if is_confident_routing_decision(rules_decision):
             fallback_reason = rules_decision.reason
-            if llm_decision.status != "success":
-                fallback_reason = f"{rules_decision.reason} LLM routing fallback reason: {llm_decision.failure_reason}"
-            elif llm_decision.route == "unknown":
-                fallback_reason = f"{rules_decision.reason} LLM routing returned unknown intent."
+            if planning_result.status != "success":
+                fallback_reason = (
+                    f"{rules_decision.reason} Semantic planning fallback reason: "
+                    f"{planning_result.failure_reason}"
+                )
+            elif semantic_plan.route == "unknown":
+                fallback_reason = f"{rules_decision.reason} Semantic planning returned unknown intent."
+            elif semantic_plan.confidence == "low":
+                fallback_reason = (
+                    f"{rules_decision.reason} Semantic planning confidence was too low "
+                    f"for direct routing."
+                )
 
             return RoutingDecision(
                 route=rules_decision.route,
@@ -330,6 +358,188 @@ class AnswerService:
                 "Try asking either a document question or a structured customer-data question."
             ),
             method="safe_fallback",
+        )
+
+    def _build_combined_response(
+        self,
+        question: str,
+        routing_decision: RoutingDecision,
+        planning_result: SemanticPlanningResult,
+        semantic_plan: SemanticQueryPlan | None,
+        chunks: list,
+        dataframe,
+        dataset_file_name: str | None,
+        dataset_info_file_name: str | None,
+    ) -> AnswerResponse:
+        retrieval_query = self._build_combined_retrieval_query(question, semantic_plan)
+        retrieved_chunks = self.retriever.retrieve(question=retrieval_query, chunks=chunks)
+        selected_chunks = self._select_retrieval_chunks(retrieved_chunks) if retrieved_chunks else []
+
+        structured_evidence = self.structured_query_engine.build_combined_evidence(
+            question=question,
+            dataframe=dataframe,
+            dataset_file_name=dataset_file_name,
+            plan=semantic_plan,
+        )
+
+        document_evidence = [
+            f"{item.chunk.file_name} | {item.chunk.section_heading or 'No heading'} | {item.chunk.text}"
+            for item in selected_chunks
+        ]
+        combined_sources = self._merge_sources(
+            self._build_chunk_sources(selected_chunks),
+            structured_evidence.sources_used,
+        )
+
+        if not combined_sources and dataset_info_file_name:
+            combined_sources.append(dataset_info_file_name)
+
+        if not selected_chunks:
+            structured_summary = structured_evidence.summary or "No structured evidence could be assembled."
+            return AnswerResponse(
+                answer=(
+                    "I could not find clearly relevant document evidence for this combined question. "
+                    f"Structured evidence available: {structured_summary}"
+                ),
+                sources_used=combined_sources,
+                support_level="low",
+                limitations=(
+                    "Combined answers require both relevant markdown guidance and structured customer evidence. "
+                    "The document side was insufficient for a grounded combined synthesis."
+                ),
+                route="combined",
+                retrieved_chunks=[],
+                follow_up_questions=self._get_follow_up_questions(route="combined"),
+                matched_customer_name=semantic_plan.customer_name if semantic_plan else None,
+                matched_field_name=semantic_plan.field_name if semantic_plan else None,
+                synthesis_method="fallback",
+                synthesis_status=None,
+                synthesis_status_message="Combined synthesis skipped: no relevant document evidence found.",
+                routing_method=routing_decision.method,
+                routing_confidence=routing_decision.confidence,
+                routing_reason=routing_decision.reason,
+                planning_method=semantic_plan.method if semantic_plan else None,
+                planning_reason=self._build_planning_reason(planning_result),
+            )
+
+        llm_result = self.retrieval_synthesizer.synthesize_combined_answer(
+            question=question,
+            evidence=structured_evidence,
+            document_evidence=document_evidence,
+        )
+        if llm_result.status == "success":
+            return AnswerResponse(
+                answer=llm_result.answer,
+                sources_used=combined_sources,
+                support_level=llm_result.support_level,
+                limitations=llm_result.limitations,
+                route="combined",
+                retrieved_chunks=selected_chunks,
+                follow_up_questions=self._get_follow_up_questions(route="combined"),
+                matched_customer_name=semantic_plan.customer_name if semantic_plan else None,
+                matched_field_name=semantic_plan.field_name if semantic_plan else None,
+                synthesis_method=llm_result.synthesis_method,
+                synthesis_status=llm_result.status,
+                synthesis_status_message=None,
+                routing_method=routing_decision.method,
+                routing_confidence=routing_decision.confidence,
+                routing_reason=routing_decision.reason,
+                planning_method=semantic_plan.method if semantic_plan else None,
+                planning_reason=self._build_planning_reason(planning_result),
+            )
+
+        fallback_summary = self._build_fallback_combined_answer(
+            selected_chunks=selected_chunks,
+            structured_evidence=structured_evidence,
+        )
+        return AnswerResponse(
+            answer=fallback_summary.answer,
+            sources_used=combined_sources,
+            support_level=fallback_summary.support_level,
+            limitations=fallback_summary.limitations,
+            route="combined",
+            retrieved_chunks=selected_chunks,
+            follow_up_questions=self._get_follow_up_questions(route="combined"),
+            matched_customer_name=semantic_plan.customer_name if semantic_plan else None,
+            matched_field_name=semantic_plan.field_name if semantic_plan else None,
+            synthesis_method=fallback_summary.synthesis_method,
+            synthesis_status=llm_result.status,
+            synthesis_status_message=llm_result.failure_reason,
+            routing_method=routing_decision.method,
+            routing_confidence=routing_decision.confidence,
+            routing_reason=routing_decision.reason,
+            planning_method=semantic_plan.method if semantic_plan else None,
+            planning_reason=self._build_planning_reason(planning_result),
+        )
+
+    def _build_combined_retrieval_query(
+        self,
+        question: str,
+        semantic_plan: SemanticQueryPlan | None,
+    ) -> str:
+        if semantic_plan is None:
+            return question
+
+        query_parts = [question]
+        if semantic_plan.product_name:
+            query_parts.append(semantic_plan.product_name)
+        if semantic_plan.document_topic:
+            query_parts.append(semantic_plan.document_topic)
+        if semantic_plan.operation == "preliminary_assessment":
+            query_parts.append("criteria policy screening")
+
+        return " ".join(part for part in query_parts if part).strip()
+
+    def _build_planning_reason(self, planning_result: SemanticPlanningResult) -> str | None:
+        if planning_result.status == "success":
+            return planning_result.plan.reason
+        return planning_result.failure_reason
+
+    def _merge_sources(self, *source_lists: list[str]) -> list[str]:
+        merged: list[str] = []
+        for source_list in source_lists:
+            for source in source_list:
+                if source not in merged:
+                    merged.append(source)
+        return merged
+
+    def _build_fallback_combined_answer(
+        self,
+        selected_chunks: list[RetrievedChunk],
+        structured_evidence: CombinedEvidence,
+    ) -> RetrievalSynthesisResult:
+        document_lines = [
+            f"- {item.chunk.file_name} | {item.chunk.section_heading or 'No heading'}: "
+            f"{self._shorten_text(item.chunk.text)}"
+            for item in selected_chunks
+        ]
+        missing_line = (
+            f"Missing or uncertain points: {'; '.join(structured_evidence.missing_information)}"
+            if structured_evidence.missing_information
+            else "Missing or uncertain points: none explicitly flagged from the current evidence pack."
+        )
+        answer = "\n".join(
+            [
+                "Combined evidence was assembled from documents and structured customer data.",
+                "Document evidence:",
+                *document_lines,
+                "Structured evidence:",
+                structured_evidence.summary,
+                missing_line,
+            ]
+        )
+        limitations = (
+            "This fallback combined answer is assembled deterministically from retrieved markdown passages "
+            "and structured customer facts. LLM synthesis was unavailable, so the app did not produce a "
+            "single natural-language combined interpretation."
+        )
+        return RetrievalSynthesisResult(
+            answer=answer,
+            support_level="medium",
+            limitations=limitations,
+            synthesis_method="fallback",
+            status="success",
+            failure_reason=None,
         )
 
     def _build_unclear_routing_response(
@@ -361,4 +571,6 @@ class AnswerService:
             routing_method=routing_decision.method,
             routing_confidence=routing_decision.confidence,
             routing_reason=routing_decision.reason,
+            planning_method=None,
+            planning_reason=None,
         )

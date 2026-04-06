@@ -8,6 +8,7 @@ from retrieval.retriever import KeywordRetriever
 from services.answer_service import AnswerService
 from services.router import RuleBasedRouter
 from structured.customer_data import CustomerDataLoader
+from structured.planner import StructuredQueryPlanner
 from structured.query_engine import StructuredQueryEngine
 
 
@@ -46,6 +47,7 @@ def run_app() -> None:
         structured_data_path=config.structured_data_path
     )
     structured_query_engine = StructuredQueryEngine()
+    structured_query_planner = StructuredQueryPlanner(retrieval_synthesizer)
     answer_service = AnswerService(
         router=router,
         document_store=document_store,
@@ -54,6 +56,7 @@ def run_app() -> None:
         retriever=retriever,
         structured_query_engine=structured_query_engine,
         retrieval_synthesizer=retrieval_synthesizer,
+        structured_query_planner=structured_query_planner,
         retrieval_context_max_characters=config.retrieval_context_max_characters,
     )
     documents = document_store.list_documents()
@@ -119,6 +122,10 @@ def run_app() -> None:
             st.caption(
                 f"Routing: {response.route} ({response.routing_method}, {response.routing_confidence} confidence) - "
                 f"{response.routing_reason}"
+            )
+        if response.planning_reason:
+            st.caption(
+                f"Structured planning: {response.planning_method} - {response.planning_reason}"
             )
         if response.synthesis_status_message:
             st.caption(response.synthesis_status_message)

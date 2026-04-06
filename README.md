@@ -2,7 +2,17 @@
 
 Lightweight Streamlit demo for a fictional business banking advisory Q&A assistant.
 
-## Run locally
+## What It Does Now
+
+The current app supports three constrained paths:
+
+- `retrieval`: markdown document retrieval with OpenAI-based synthesis grounded only in retrieved chunks
+- `structured`: deterministic CSV querying for customer facts, filters, comparisons, counts, and existence checks
+- `combined`: semantic planning plus evidence-based synthesis using retrieved document evidence and deterministic structured evidence
+
+The app is intentionally scoped as decision support only. It does not make approvals, risk decisions, or real-world recommendations.
+
+## Run Locally
 
 1. Create and activate a virtual environment.
 2. Install dependencies:
@@ -11,62 +21,82 @@ Lightweight Streamlit demo for a fictional business banking advisory Q&A assista
 pip install -r requirements.txt
 ```
 
-3. Start the app:
+3. Set environment variables in `.env` if you want OpenAI-enabled routing and synthesis:
+
+```env
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-5.4-mini
+ENABLE_LLM_FOR_RETRIEVAL=true
+```
+
+4. Start the app:
 
 ```bash
 streamlit run app/main.py
 ```
 
-## Current scope
+## Data Included In The Repo
 
-This stage supports two grounded paths:
+The repository already includes demo source files:
 
-- markdown retrieval for document-oriented questions, with OpenAI used only for retrieval answer synthesis
-- deterministic CSV querying for structured business questions
+- markdown documents in `data/docs/`
+- one CSV dataset in `data/structured/`
 
-Combined reasoning across both sources is not implemented yet. OpenAI-based synthesis is now used only for retrieval answers, while structured CSV answers remain deterministic.
+Supported file handling in the current version:
 
-## Included demo data
+- document discovery: `.md`, `.txt`, `.pdf`
+- retrieval content path: `.md` only
+- structured dataset loading: `.csv`
 
-The repository now includes demo markdown documents in `data/docs/` and a demo CSV in `data/structured/`.
+## Current Behavior
 
-Supported document discovery types:
-- `.md`
-- `.txt`
-- `.pdf`
+- Questions are first interpreted through an LLM-based semantic planning layer.
+- If semantic planning is unavailable or unclear, a deterministic rule-based router remains as fallback.
+- Retrieval answers are synthesized only from retrieved markdown chunks.
+- Structured answers are executed deterministically from CSV data after semantic planning.
+- Combined answers use a controlled evidence flow:
+  - retrieve document evidence
+  - assemble structured customer evidence deterministically
+  - synthesize a cautious answer from those evidence packs only
+- Source references shown in the UI come from application metadata, not model-invented citations.
+- If OpenAI is unavailable, the app still runs with deterministic fallbacks where possible.
 
-Current retrieval content path:
-- `.md` only
+## OpenAI Usage
 
-Supported structured file type:
-- `.csv`
+OpenAI is used only for:
 
-## Current behavior
+- semantic planning / routing
+- retrieval answer synthesis
+- combined evidence synthesis
 
-- Retrieval questions use markdown-only chunk retrieval with deterministic keyword matching, then optionally use OpenAI to synthesize a concise grounded answer from the retrieved chunks only.
-- Structured questions use deterministic pandas-based querying for specific customer facts, simple comparisons, and simple filters.
-- Combined routes return a controlled limitation message instead of faking combined reasoning.
-- Answers show source references and should be treated as preliminary demo output, not decisions.
-- The default retrieval synthesis model is `gpt-5.4-mini`, configurable through environment variables.
+OpenAI is not used to directly answer structured CSV questions from scratch. CSV execution remains deterministic for transparency and control.
 
-If `OPENAI_API_KEY` is missing, the app still runs and retrieval answers fall back to a deterministic chunk-based summary.
+For hosted Streamlit use, runtime settings can come from:
 
-## OpenAI Setup
+1. `st.secrets`
+2. environment variables
+3. safe defaults where applicable
 
-For local development, copy `.env.example` to `.env` and set:
+## Project Structure
 
-- `OPENAI_API_KEY`
-- optionally `OPENAI_MODEL`
+- `app/llm/`: OpenAI client and prompt builders
+- `app/retrieval/`: markdown loading, chunking, and deterministic retrieval
+- `app/structured/`: CSV loading, semantic planning entry point, and deterministic query execution
+- `app/services/`: orchestration and fallback routing
+- `app/ui/`: Streamlit presentation layer
+- `app/config.py`: paths and runtime settings
+- `data/`: constrained demo sources used by the app
 
-The app loads these values at runtime. If no API key is present, only the retrieval synthesis step falls back; structured CSV answers remain deterministic.
+## Current Limitations
 
-## Structure
+- no embeddings or vector database
+- no PDF text parsing
+- no unrestricted agent behavior
+- no production decision engine
+- combined reasoning is still an MVP and intentionally cautious
 
-- `app/retrieval/` contains markdown loading, chunking, and retrieval logic.
-- `app/llm/` contains OpenAI client usage and retrieval prompt construction.
-- `app/structured/` contains CSV loading and structured query logic.
-- `app/services/router.py` keeps routing separate and explainable.
-- `app/config.py` centralizes paths and lightweight settings.
-- `data/` holds the constrained internal sources used by the demo.
+## Next Likely Extensions
 
-This staged design keeps the deterministic retrieval and structured foundations visible, while making it straightforward to extend later with better ranking, prompt iteration, and combined reasoning.
+- improve retrieval ranking and lightweight evaluation coverage
+- strengthen combined evidence reasoning and confidence labelling
+- add broader structured alias coverage while keeping execution deterministic

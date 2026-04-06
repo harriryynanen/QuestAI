@@ -1,0 +1,28 @@
+from llm.openai_client import OpenAIRetrievalSynthesizer
+from models import SemanticPlanningResult, SemanticQueryPlan
+
+
+class StructuredQueryPlanner:
+    def __init__(self, llm_client: OpenAIRetrievalSynthesizer) -> None:
+        self.llm_client = llm_client
+
+    def plan(self, question: str) -> SemanticPlanningResult:
+        return self.llm_client.plan_question(question)
+
+    @staticmethod
+    def heuristic_fallback_plan(reason: str) -> SemanticQueryPlan:
+        return SemanticQueryPlan(
+            route="unknown",
+            operation="unknown",
+            field_name=None,
+            customer_name=None,
+            product_name=None,
+            document_topic=None,
+            comparison_direction=None,
+            filter_value=None,
+            needs_documents=False,
+            needs_structured_data=True,
+            reason=reason,
+            confidence="low",
+            method="heuristic_fallback",
+        )

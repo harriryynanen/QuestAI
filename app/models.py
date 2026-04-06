@@ -8,6 +8,19 @@ SupportLevel = Literal["low", "medium", "high"]
 SynthesisStatus = Literal["success", "missing_api_key", "disabled", "api_error", "invalid_response"]
 RoutingMethod = Literal["llm", "rules", "safe_fallback"]
 RoutingStatus = Literal["success", "missing_api_key", "disabled", "api_error", "invalid_response"]
+PlanningMethod = Literal["llm", "heuristic_fallback"]
+PlanningStatus = Literal["success", "missing_api_key", "disabled", "api_error", "invalid_response"]
+Operation = Literal[
+    "fact",
+    "filter",
+    "comparison",
+    "count",
+    "exists",
+    "policy_lookup",
+    "product_guidance",
+    "preliminary_assessment",
+    "unknown",
+]
 
 
 @dataclass(frozen=True)
@@ -27,6 +40,8 @@ class AnswerResponse:
     routing_method: RoutingMethod = "rules"
     routing_confidence: SupportLevel = "low"
     routing_reason: str | None = None
+    planning_method: PlanningMethod | None = None
+    planning_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -78,6 +93,8 @@ class StructuredQueryResult:
     limitations: str
     matched_customer_name: str | None
     matched_field_name: str | None
+    planning_method: PlanningMethod = "heuristic_fallback"
+    planning_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -106,3 +123,34 @@ class IntentClassificationResult:
     method: RoutingMethod
     status: RoutingStatus
     failure_reason: str | None = None
+
+
+@dataclass(frozen=True)
+class SemanticQueryPlan:
+    route: Route
+    operation: Operation
+    customer_name: str | None
+    field_name: str | None
+    product_name: str | None
+    document_topic: str | None
+    comparison_direction: str | None
+    filter_value: str | None
+    needs_documents: bool
+    needs_structured_data: bool
+    confidence: SupportLevel
+    reason: str
+    method: PlanningMethod
+
+
+@dataclass(frozen=True)
+class SemanticPlanningResult:
+    plan: SemanticQueryPlan
+    status: PlanningStatus
+    failure_reason: str | None = None
+
+
+@dataclass(frozen=True)
+class CombinedEvidence:
+    summary: str
+    sources_used: list[str]
+    missing_information: list[str]

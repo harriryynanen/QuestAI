@@ -2,8 +2,18 @@ import json
 
 from openai import OpenAI
 
-from llm.prompts import build_intent_classification_messages, build_retrieval_messages
-from models import IntentClassificationResult, RetrievalSynthesisResult, RetrievedChunk
+from llm.prompts import (
+    build_combined_answer_messages,
+    build_retrieval_messages,
+    build_semantic_plan_messages,
+)
+from models import (
+    CombinedEvidence,
+    RetrievalSynthesisResult,
+    RetrievedChunk,
+    SemanticPlanningResult,
+    SemanticQueryPlan,
+)
 
 
 class OpenAIRetrievalSynthesizer:
@@ -113,38 +123,47 @@ class OpenAIRetrievalSynthesizer:
             self._client = OpenAI(api_key=self.api_key)
         return self._client
 
-    def classify_intent(
+    def plan_question(
         self,
         question: str,
-    ) -> IntentClassificationResult:
+    ) -> SemanticPlanningResult:
+        fallback_plan = SemanticQueryPlan(
+            route="unknown",
+            operation="unknown",
+            customer_name=None,
+            field_name=None,
+            product_name=None,
+            document_topic=None,
+            comparison_direction=None,
+            filter_value=None,
+            needs_documents=False,
+            needs_structured_data=False,
+            confidence="low",
+            reason="Semantic planning unavailable.",
+            method="llm",
+        )
         if not self.enabled:
-            return IntentClassificationResult(
-                route="unknown",
-                confidence="low",
-                reason="LLM routing disabled by configuration.",
-                method="llm",
+            return SemanticPlanningResult(
+                plan=fallback_plan,
                 status="disabled",
-                failure_reason="LLM routing disabled by configuration.",
+                failure_reason="Semantic planning disabled by configuration.",
             )
         if not self.api_key:
-            return IntentClassificationResult(
-                route="unknown",
-                confidence="low",
-                reason="LLM routing unavailable because API key is missing.",
-                method="llm",
+            return SemanticPlanningResult(
+                plan=fallback_plan,
                 status="missing_api_key",
-                failure_reason="LLM routing unavailable: missing API key.",
+                failure_reason="Semantic planning unavailable: missing API key.",
             )
 
         try:
             client = self._get_client()
             response = client.responses.create(
                 model=self.model,
-                input=build_intent_classification_messages(question=question),
+                input=build_semantic_plan_messages(question=question),
                 text={
                     "format": {
                         "type": "json_schema",
-                        "name": "intent_classification",
+                        "name": "semantic_plan",
                         "strict": True,
                         "schema": {
                             "type": "object",
@@ -153,13 +172,69 @@ class OpenAIRetrievalSynthesizer:
                                     "type": "string",
                                     "enum": ["retrieval", "structured", "combined", "unknown"],
                                 },
+                                "operation": {
+                                    "type": "string",
+                                    "enum": [
+                                        "fact",
+                                        "filter",
+                                        "comparison",
+                                        "count",
+                                        "exists",
+                                        "policy_lookup",
+                                        "product_guidance",
+                                        "preliminary_assessment",
+                                        "unknown",
+                                    ],
+                                },
+                                "customer_name": {"type": ["string", "null"]},
+                                "field_name": {
+                                    "type": ["string", "null"],
+                                    "enum": [
+                                        "latest_revenue_eur",
+                                        "ebitda_eur",
+                                        "ebitda_margin_pct",
+                                        "equity_ratio_pct",
+                                        "debt_to_ebitda",
+                                        "years_in_operation",
+                                        "b2b_invoicing_pct",
+                                        "export_sales_pct",
+                                        "has_tax_arrears",
+                                        "latest_financials_available",
+                                        "payment_delays_12m",
+                                        "largest_customer_share_pct",
+                                        "requested_product_interest",
+                                        None,
+                                    ],
+                                },
+                                "product_name": {"type": ["string", "null"]},
+                                "document_topic": {"type": ["string", "null"]},
+                                "comparison_direction": {
+                                    "type": ["string", "null"],
+                                    "enum": ["highest", "lowest", None],
+                                },
+                                "filter_value": {"type": ["string", "null"]},
+                                "needs_documents": {"type": "boolean"},
+                                "needs_structured_data": {"type": "boolean"},
                                 "confidence": {
                                     "type": "string",
                                     "enum": ["low", "medium", "high"],
                                 },
                                 "reason": {"type": "string"},
                             },
-                            "required": ["route", "confidence", "reason"],
+                            "required": [
+                                "route",
+                                "operation",
+                                "customer_name",
+                                "field_name",
+                                "product_name",
+                                "document_topic",
+                                "comparison_direction",
+                                "filter_value",
+                                "needs_documents",
+                                "needs_structured_data",
+                                "confidence",
+                                "reason",
+                            ],
                             "additionalProperties": False,
                         },
                     }
@@ -167,30 +242,135 @@ class OpenAIRetrievalSynthesizer:
             )
             payload = json.loads(response.output_text)
         except Exception:
-            return IntentClassificationResult(
-                route="unknown",
-                confidence="low",
-                reason="LLM routing unavailable because the API request failed.",
-                method="llm",
+            return SemanticPlanningResult(
+                plan=fallback_plan,
                 status="api_error",
-                failure_reason="LLM routing unavailable: API error.",
+                failure_reason="Semantic planning unavailable: API error.",
             )
 
-        if not all(key in payload for key in ("route", "confidence", "reason")):
-            return IntentClassificationResult(
-                route="unknown",
-                confidence="low",
-                reason="LLM routing returned an invalid response.",
-                method="llm",
+        required_keys = {
+            "route",
+            "operation",
+            "customer_name",
+            "field_name",
+            "product_name",
+            "document_topic",
+            "comparison_direction",
+            "filter_value",
+            "needs_documents",
+            "needs_structured_data",
+            "confidence",
+            "reason",
+        }
+        if not required_keys.issubset(payload.keys()):
+            return SemanticPlanningResult(
+                plan=fallback_plan,
                 status="invalid_response",
-                failure_reason="LLM routing unavailable: invalid response format.",
+                failure_reason="Semantic planning unavailable: invalid response format.",
             )
 
-        return IntentClassificationResult(
-            route=str(payload["route"]),
-            confidence=str(payload["confidence"]),
-            reason=str(payload["reason"]),
-            method="llm",
+        return SemanticPlanningResult(
+            plan=SemanticQueryPlan(
+                route=str(payload["route"]),
+                operation=str(payload["operation"]),
+                customer_name=payload["customer_name"],
+                field_name=payload["field_name"],
+                product_name=payload["product_name"],
+                document_topic=payload["document_topic"],
+                comparison_direction=payload["comparison_direction"],
+                filter_value=payload["filter_value"],
+                needs_documents=bool(payload["needs_documents"]),
+                needs_structured_data=bool(payload["needs_structured_data"]),
+                confidence=str(payload["confidence"]),
+                reason=str(payload["reason"]),
+                method="llm",
+            ),
+            status="success",
+            failure_reason=None,
+        )
+
+    def synthesize_combined_answer(
+        self,
+        question: str,
+        evidence: CombinedEvidence,
+        document_evidence: list[str],
+    ) -> RetrievalSynthesisResult:
+        if not self.enabled:
+            return RetrievalSynthesisResult(
+                answer="",
+                support_level="low",
+                limitations="",
+                synthesis_method="fallback",
+                status="disabled",
+                failure_reason="Combined synthesis disabled by configuration.",
+            )
+        if not self.api_key:
+            return RetrievalSynthesisResult(
+                answer="",
+                support_level="low",
+                limitations="",
+                synthesis_method="fallback",
+                status="missing_api_key",
+                failure_reason="Combined synthesis unavailable: missing API key.",
+            )
+
+        try:
+            client = self._get_client()
+            response = client.responses.create(
+                model=self.model,
+                input=build_combined_answer_messages(
+                    question=question,
+                    document_evidence=document_evidence,
+                    structured_evidence=evidence.summary,
+                    missing_information=evidence.missing_information,
+                ),
+                text={
+                    "format": {
+                        "type": "json_schema",
+                        "name": "combined_answer",
+                        "strict": True,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "answer": {"type": "string"},
+                                "support_level": {
+                                    "type": "string",
+                                    "enum": ["low", "medium", "high"],
+                                },
+                                "limitations": {"type": "string"},
+                            },
+                            "required": ["answer", "support_level", "limitations"],
+                            "additionalProperties": False,
+                        },
+                    }
+                },
+            )
+            payload = json.loads(response.output_text)
+        except Exception:
+            return RetrievalSynthesisResult(
+                answer="",
+                support_level="low",
+                limitations="",
+                synthesis_method="fallback",
+                status="api_error",
+                failure_reason="Combined synthesis unavailable: API error.",
+            )
+
+        if not all(key in payload for key in ("answer", "support_level", "limitations")):
+            return RetrievalSynthesisResult(
+                answer="",
+                support_level="low",
+                limitations="",
+                synthesis_method="fallback",
+                status="invalid_response",
+                failure_reason="Combined synthesis unavailable: invalid response format.",
+            )
+
+        return RetrievalSynthesisResult(
+            answer=str(payload["answer"]),
+            support_level=str(payload["support_level"]),
+            limitations=str(payload["limitations"]),
+            synthesis_method="llm",
             status="success",
             failure_reason=None,
         )

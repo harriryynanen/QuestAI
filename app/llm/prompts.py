@@ -45,22 +45,59 @@ def build_retrieval_messages(
     ]
 
 
-def build_intent_classification_messages(question: str) -> list[dict[str, str]]:
+def build_semantic_plan_messages(question: str) -> list[dict[str, str]]:
     instructions = (
-        "Classify the user's question into exactly one route for a fictional business banking advisory demo. "
+        "Interpret the user's question into a constrained semantic plan for a fictional business banking advisory demo. "
         "Do not answer the question. "
-        "Return JSON with exactly these keys: route, confidence, reason. "
+        "Return JSON with exactly these keys: route, operation, customer_name, field_name, product_name, document_topic, comparison_direction, filter_value, needs_documents, needs_structured_data, confidence, reason. "
         "route must be one of: retrieval, structured, combined, unknown. "
+        "operation must be one of: fact, filter, comparison, count, exists, policy_lookup, product_guidance, preliminary_assessment, unknown. "
         "confidence must be one of: low, medium, high. "
-        "Use retrieval for questions about policies, written guidance, product descriptions, or document interpretation. "
-        "Use structured for questions about customer facts, rankings, filters, numeric values, or yes/no fields from CSV data. "
-        "Use combined only when the question explicitly requires both document guidance and customer-specific structured data. "
-        "Use unknown when the intent is too unclear to route confidently."
+        "field_name should use only supported internal column names when known, otherwise null. "
+        "Supported field_name values include: latest_revenue_eur, ebitda_eur, ebitda_margin_pct, equity_ratio_pct, debt_to_ebitda, years_in_operation, b2b_invoicing_pct, export_sales_pct, has_tax_arrears, latest_financials_available, payment_delays_12m, largest_customer_share_pct, requested_product_interest. "
+        "comparison_direction must be highest, lowest, or null. "
+        "Use retrieval for questions about policies, guides, guidance, criteria, product descriptions, or document interpretation. "
+        "Use structured for customer facts, filters, counts, existence checks, or comparisons from CSV data. "
+        "Use combined only when the question explicitly needs both document guidance and customer-specific structured data together. "
+        "Use unknown when the question is too unclear to map safely. "
+        "Support modest English and Finnish business wording variation."
     )
 
     user_message = (
         f"Question:\n{question}\n\n"
-        "Classify only the intent. Do not use outside knowledge and do not invent missing context."
+        "Interpret only into a safe semantic plan. Do not invent missing data and do not answer the question itself."
+    )
+
+    return [
+        {"role": "system", "content": instructions},
+        {"role": "user", "content": user_message},
+    ]
+
+
+def build_combined_answer_messages(
+    question: str,
+    document_evidence: list[str],
+    structured_evidence: str,
+    missing_information: list[str],
+) -> list[dict[str, str]]:
+    instructions = (
+        "You are helping with a fictional business banking advisory demo. "
+        "Write a cautious combined answer using only the provided evidence pack. "
+        "Do not use outside knowledge. "
+        "Do not claim approval, eligibility, suitability, or final credit decisions. "
+        "Clearly distinguish what is supported by documents, what is supported by structured data, and what remains uncertain. "
+        "Return JSON with exactly these keys: answer, support_level, limitations. "
+        "support_level must be one of: low, medium, high."
+    )
+
+    document_text = "\n\n".join(document_evidence) if document_evidence else "No document evidence retrieved."
+    missing_text = "\n".join(f"- {item}" for item in missing_information) if missing_information else "- No explicit missing-information note."
+    user_message = (
+        f"Question:\n{question}\n\n"
+        f"Document evidence:\n{document_text}\n\n"
+        f"Structured evidence:\n{structured_evidence}\n\n"
+        f"Missing information notes:\n{missing_text}\n\n"
+        "Use only this evidence pack."
     )
 
     return [

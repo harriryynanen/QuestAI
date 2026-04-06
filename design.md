@@ -1,180 +1,175 @@
-# Business Q&A Assistant – Design Overview
+# QuestAI Design Overview
 
-## 1. Problem Definition
+## 1. Context and Purpose
 
 Business experts often need quick answers based on internal guidance and simple customer-related data. In practice, relevant information is split between:
 - textual instructions, policies, and product guidance
 - structured records containing customer facts or simple business metrics
 
-This solution provides a single interface where a user can ask natural-language questions and receive concise, well-reasoned answers grounded only in the provided sample data.
-
 The demonstration context is a **fictional business banking advisory scenario**. The user role is similar to a relationship manager working with SME customers, but all materials, customer names, product names, and examples are synthetic and created only for demonstration purposes.
 
-The focus is on:
-- fast access to relevant information
-- concise answers suitable for busy expert users
-- visible source references
-- explicit handling of uncertainty and missing information
+QuestAI is a lightweight Streamlit-based Business Q&A Assistant built for a recruitment assignment. It answers questions against a constrained set of fictional internal sources:
 
----
+- markdown documents representing internal guidance
+- one structured CSV dataset representing customer facts
 
-## 2. Data Sources
+The goal is not to simulate a production banking decision engine. The goal is to demonstrate clear scoping, grounded reasoning, uncertainty handling, and an extensible structure.
 
-The system operates on a limited, well-defined sample dataset.
+## 2. Current Architecture
 
-### Unstructured Data (RAG)
-2–3 synthetic internal documents, for example:
-- a financing product guideline
-- an internal eligibility policy summary
-- an FAQ or internal advisory note
+The current system uses a modular three-step pattern:
 
-These documents simulate the kind of internal written material an expert may need to consult.
+1. semantic planning
+2. constrained execution
+3. grounded answer generation
 
-### Structured Data (Tool)
-1 synthetic CSV or JSON dataset containing simple customer-level facts, for example:
-- customer name
-- segment
-- turnover
-- EBITDA
-- equity ratio
-- existing products
-- other simple eligibility-relevant fields
+### 2.1 Semantic Planning
 
-### Metadata
-Where possible, the system preserves lightweight metadata such as:
-- document name
-- section heading
-- page reference (if available)
-- chunk identifier
+An OpenAI-based planner interprets the user question into a compact JSON plan. The plan can include:
 
-This metadata is used to make answers more transparent.
+- `route`: `retrieval` | `structured` | `combined` | `unknown`
+- `operation`: `fact` | `filter` | `comparison` | `count` | `exists` | `policy_lookup` | `product_guidance` | `preliminary_assessment` | `unknown`
+- `customer_name`
+- `field_name`
+- `product_name`
+- `document_topic`
+- `needs_documents`
+- `needs_structured_data`
+- `confidence`
+- `reason`
 
----
+This planning layer improves flexibility over pure keyword routing, while keeping the system constrained and inspectable.
 
-## 3. Supported Question Types
+### 2.2 Deterministic Execution
 
-### 3.1 Document-based Questions (Retrieval)
-Questions about rules, instructions, or product guidance, for example:
-- “What does the policy say about minimum equity ratio for Product Alpha Demo?”
-- “How should an advisor interpret the basic eligibility guidance for export financing?”
+The planner does not execute tools directly.
 
-→ Answered using document retrieval over the synthetic documents.
+Execution remains separated by source type:
 
-### 3.2 Structured Data Questions
-Questions about specific customer facts or simple aggregations, for example:
-- “What is Demo Manufacturing Ltd’s latest equity ratio?”
-- “Which demo customer has the highest turnover in the sample data?”
+- `retrieval`:
+  - load markdown documents
+  - split into chunks
+  - retrieve top chunks with deterministic scoring
+- `structured`:
+  - load CSV with pandas
+  - execute deterministic fact/filter/comparison/count/exists logic
+- `combined`:
+  - assemble both document evidence and structured evidence
+  - keep the evidence pack explicit
 
-→ Answered using deterministic structured-data processing.
+### 2.3 Answer Generation
 
-### 3.3 Combined Questions (Optional but Valuable)
-Questions that require both policy context and customer data, for example:
-- “Based on the provided policy and sample customer data, does Demo Manufacturing Ltd appear to meet the basic criteria for Product Alpha Demo?”
+- Retrieval answers use OpenAI synthesis only after relevant chunks are selected.
+- Structured answers remain deterministic and are built directly from CSV results.
+- Combined answers use OpenAI only to synthesize across an explicit evidence pack assembled by the app.
 
-→ Uses both document retrieval and structured data.
+This preserves the principle that LLMs interpret and summarize, while the application controls what evidence is available.
 
-The answer is positioned as **decision support**, not as an automated banking decision.
+## 3. Data Sources
 
----
+### 3.1 Unstructured Source
 
-## 4. Out of Scope (Explicit Limitations)
+Markdown files in `data/docs/` act as synthetic internal guidance. These are used for:
 
-To keep the solution focused, reliable, and aligned with the assignment scope:
+- policy questions
+- product guidance questions
+- written-rule interpretation
 
-- no real-time integrations with operational systems
-- no write actions or workflow automation
-- no general knowledge outside the provided sample data
-- no production-grade credit decisioning
-- no long-term user memory
+### 3.2 Structured Source
 
-The system only answers based on the provided dataset and does not claim to replace formal review or approval processes.
+The CSV file in `data/structured/` acts as a synthetic customer portfolio dataset. It is used for:
 
----
+- customer fact lookups
+- filters
+- comparisons
+- counts
+- existence checks
 
-## 5. System Behavior: Retrieval vs Structured Data
+## 4. Routing And Fallback Strategy
 
-The system uses simple and transparent routing logic.
+Routing now follows this order:
 
-### Retrieval (RAG)
-Used when the question is about:
-- policy
-- instructions
-- product guidance
-- interpretation of written material
+1. try semantic planning through the LLM
+2. if the returned route is confident and valid, use it
+3. otherwise fall back to the deterministic rule-based router
+4. if still unclear, return a controlled unclear-response
 
-The system searches the indexed document chunks semantically and provides relevant context to the LLM.
+The rule-based router remains useful for robustness, but it is no longer the primary behavior.
 
-### Structured Data Tool
-Used when the question is about:
-- specific customer facts
-- simple filters
-- aggregations or comparisons
-- numeric values
+## 5. Combined Evidence Flow
 
-The system answers these using deterministic data handling (for example, pandas-based filtering or aggregation).
+Combined questions are now handled through a constrained MVP flow:
 
-### Combined Use
-If the question requires both written guidance and customer facts, the system can use both paths and then synthesize a final answer.
+1. semantic planner identifies a combined question
+2. retrieval layer fetches relevant markdown chunks
+3. structured layer assembles relevant customer evidence deterministically
+4. answer service builds a combined evidence pack
+5. OpenAI synthesizes a cautious answer using only:
+   - retrieved document evidence
+   - structured evidence summary
+   - explicit missing-information notes
 
-The routing logic is intentionally kept simple, explainable, and easy to extend.
+This is still not an autonomous agent. The app decides what evidence is gathered and what operations are allowed.
 
----
+## 6. Source Grounding
 
-## 6. Answer Format and Uncertainty Handling
+Source references shown to the user come from application metadata, not model-generated citations.
 
-Each response should include the following sections.
-
-### Answer
-A concise answer in plain language.
-
-### Sources Used
 Examples:
-- `product_policy_demo.md`, section “Eligibility criteria”
-- `customer_metrics_demo.csv`, row or filtered result reference
 
-### Support Level
-The response is labelled as one of:
-- **Directly supported**
-- **Partially supported**
-- **Not sufficiently supported**
+- document source: file name + section heading
+- structured source: CSV file + row/column/filter reference
 
-### Missing Information / Limitations
-If the available evidence is incomplete, the system should say so clearly. Example:
+The model may generate explanation text, but source references remain under application control.
 
-> I could not find sufficient support in the provided sample data to answer this confidently.
+## 7. Uncertainty Handling
 
-The system avoids guessing and does not use external knowledge.
+The app is designed to avoid fake certainty.
 
----
+Responses always include:
 
-## 7. Design Principles
+- Answer
+- Sources Used
+- Support Level
+- Limitations
 
-- clarity over complexity
-- source-grounded answers
-- explicit uncertainty handling
+When support is weak, missing, or ambiguous, the app says so explicitly. Combined answers are framed as preliminary support, not final decisions.
+
+## 8. Why This Design Is Credible For The Assignment
+
+This design aims to show:
+
 - modular separation of concerns
-- easy extensibility
+- constrained and grounded LLM usage
+- deterministic structured execution
+- explicit fallback behavior
+- easy extensibility without overengineering
 
-The architecture should make it straightforward to:
-- add new documents without changing core logic
-- add new structured datasets with limited code changes
-- add new tools through a modular routing layer
-- replace the vector store or model through configuration
+The code makes it clear where each responsibility lives:
 
----
+- planning in `app/llm/` and `app/structured/planner.py`
+- retrieval in `app/retrieval/`
+- structured execution in `app/structured/query_engine.py`
+- orchestration in `app/services/answer_service.py`
+- UI in `app/ui/streamlit_app.py`
 
-## 8. Data Safety and Domain Framing
+## 9. Current Limitations
 
-To avoid any ambiguity, the demonstration uses only **synthetic sample material**:
-- no real customer names
-- no real product names
-- no real internal documents
-- no direct reference to any real financial institution
+The current system still has deliberate limits:
 
-All names should clearly indicate that the data is fictional test material, for example:
-- `Demo Manufacturing Ltd`
-- `North Harbor Test Oy`
-- `Product Alpha Demo`
-- `Eligibility Guide – Sample Only`
+- no embeddings or vector database
+- markdown retrieval only for actual content use
+- no PDF parsing
+- no unrestricted tool use
+- no production-grade decision engine
+- combined reasoning remains cautious and lightweight
 
-This keeps the project safe, portable, and appropriate for a recruitment exercise.
+These limits are intentional to keep the MVP understandable and honest.
+
+## 10. Near-Term Next Steps
+
+The most sensible next improvements are:
+
+- add lightweight evaluation coverage for routing, retrieval, structured, and combined examples
+- improve combined confidence labelling and evidence presentation
+- expand structured alias coverage and planner robustness without giving up deterministic execution
