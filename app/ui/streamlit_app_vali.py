@@ -23,401 +23,294 @@ def _inject_styles() -> None:
         """
         <style>
         :root {
-            --qa-bg: #f6f7fb;
-            --qa-panel: #ffffff;
-            --qa-border: #dfe3ea;
-            --qa-text: #162033;
-            --qa-muted: #6d7890;
-            --qa-accent: #0f8b8d;
-            --qa-chip: #eef2f8;
-            --qa-shadow: 0 8px 30px rgba(18, 31, 53, 0.08);
-            --qa-content-width: 900px;
-            --qa-header-height: 116px;
-            --qa-composer-height: 156px;
+            --bg: #f6f7fb;
+            --panel: rgba(255,255,255,0.95);
+            --panel-solid: #ffffff;
+            --border: #dfe3ea;
+            --text: #162033;
+            --muted: #6d7890;
+            --accent: #0f8b8d;
+            --chip: #eef2f8;
+            --header-height: 104px;
+            --composer-height: 150px;
+            --content-width: 760px;
+            --radius: 18px;
+            --shadow: 0 8px 30px rgba(18, 31, 53, 0.08);
+            --shadow-header: 0 4px 20px rgba(18, 31, 53, 0.04);
+            --shadow-footer: 0 -8px 30px rgba(18, 31, 53, 0.05);
         }
 
         html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"], .stApp {
-            background: var(--qa-bg);
+            background: var(--bg) !important;
+            color: var(--text) !important;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
         }
 
-        [data-testid="stAppViewContainer"] {
-            overflow-x: hidden;
-        }
-
+        /* Pad the main content area so it doesn't hide behind floating elements */
         .block-container {
-            max-width: var(--qa-content-width);
-            padding-top: calc(var(--qa-header-height) + 1.8rem);
-            padding-bottom: calc(var(--qa-composer-height) + 1.8rem);
+            max-width: var(--content-width) !important;
+            padding-top: calc(var(--header-height) + 2rem) !important;
+            padding-bottom: calc(var(--composer-height) + 2.5rem) !important;
         }
 
-        #qa-header-anchor + div,
-        #qa-composer-anchor + div {
-            pointer-events: none;
-        }
-
-        #qa-header-anchor + div > div,
-        #qa-composer-anchor + div > div {
-            pointer-events: auto;
-            width: min(calc(100vw - 24px), var(--qa-content-width));
-            margin: 0 auto;
-        }
-
-        #qa-header-anchor + div {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            z-index: 20;
-            background: rgba(246, 247, 251, 0.96);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(223, 227, 234, 0.85);
-        }
-
-        #qa-composer-anchor + div {
-            position: fixed !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
+        /* ----------------------------------- */
+        /* FULL-WIDTH FLOATING HEADER          */
+        /* ----------------------------------- */
+        div[data-testid="stVerticalBlock"]:has(> div.element-container #qa-header-anchor) {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100vw !important;
-            z-index: 20;
-            background: linear-gradient(to top, rgba(246, 247, 251, 0.98), rgba(246, 247, 251, 0.93));
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(223, 227, 234, 0.85);
-        }
-
-        .qa-header-shell {
-            min-height: var(--qa-header-height);
+            height: var(--header-height);
+            background: var(--panel);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            z-index: 99999;
+            box-shadow: var(--shadow-header);
             display: flex;
-            align-items: center;
-        }
-
-        .qa-header-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            width: 100%;
-        }
-
-        .qa-brand-wrap {
-            min-width: 0;
-        }
-
-        .qa-title {
-            margin: 0 0 0.25rem 0;
-            color: var(--qa-text);
-            font-size: 1.95rem;
-            font-weight: 700;
-            letter-spacing: -0.03em;
-            line-height: 1.05;
-        }
-
-        .qa-status-line {
-            color: var(--qa-muted);
-            font-size: 0.83rem;
-            line-height: 1.45;
-        }
-
-        .qa-status-note {
-            width: min(calc(100vw - 24px), var(--qa-content-width));
-            margin: 0.35rem auto 0 auto;
-        }
-
-        .qa-chat-region {
-            padding-top: 1.65rem;
-            padding-bottom: 0.65rem;
-        }
-
-        .qa-chat-shell {
-            display: flex;
-            flex-direction: column;
-            gap: 1.1rem;
-            width: 100%;
-        }
-
-        .qa-user-row {
-            display: flex;
-            justify-content: flex-end;
-            width: 100%;
-        }
-
-        .qa-user-message {
-            display: flex;
-            align-items: flex-end;
-            justify-content: flex-end;
-            gap: 0.65rem;
-            width: 100%;
-        }
-
-        .qa-user-bubble {
-            max-width: 78%;
-            background: #e9edf4;
-            border: 1px solid #dbe1e8;
-            border-radius: 18px 18px 8px 18px;
-            padding: 0.9rem 1rem;
-            color: var(--qa-text);
-            font-size: 0.96rem;
-            line-height: 1.5;
-            white-space: pre-wrap;
-            box-shadow: 0 3px 12px rgba(18, 31, 53, 0.05);
-        }
-
-        .qa-assistant-row {
-            display: flex;
-            justify-content: flex-start;
-            width: 100%;
-        }
-
-        .qa-assistant-message {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.8rem;
-            width: 100%;
-        }
-
-        .qa-avatar {
-            width: 2rem;
-            height: 2rem;
-            border-radius: 999px;
-            display: inline-flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
-            font-size: 0.76rem;
+            padding: 1rem 0;
+        }
+        div[data-testid="stVerticalBlock"]:has(> div.element-container #qa-header-anchor) > div {
+            max-width: var(--content-width) !important;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        /* Header typography */
+        .brand-wrap { min-width: 0; }
+        .brand {
+            font-size: 20px;
             font-weight: 700;
+            margin: 0 0 4px 0;
+            letter-spacing: -0.02em;
+            color: var(--text);
+            line-height: 1.2;
+        }
+        .meta {
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.35;
         }
 
-        .qa-avatar-user {
-            background: #dfe4eb;
-            color: #3f4957;
-            border: 1px solid #cfd7e2;
+        /* Clear button styling */
+        .header-clear-wrap div[data-testid="stButton"] > button {
+            border: 1px solid var(--border) !important;
+            background: var(--panel-solid) !important;
+            color: var(--text) !important;
+            border-radius: 12px !important;
+            padding: 11px 18px !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(18,31,53,0.04) !important;
+            min-height: auto !important;
+            height: auto !important;
+            float: right;
         }
 
-        .qa-avatar-assistant {
-            background: #e8eef7;
-            color: #1f3b5b;
-            border: 1px solid #d3dfef;
+        /* ----------------------------------- */
+        /* CHAT MESSAGE STYLES                 */
+        /* ----------------------------------- */
+        .chat-inner {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+        }
+        .message-row {
+            display: flex;
+            width: 100%;
+        }
+        .message-row.user {
+            justify-content: flex-end;
+            margin-bottom: 8px;
+        }
+        .message-bubble {
+            max-width: 80%;
+            border-radius: var(--radius);
+            padding: 14px 18px;
+            font-size: 15px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        .message-row.user .message-bubble {
+            background: #e9edf4;
+            color: var(--text);
+            border-top-right-radius: 6px;
         }
 
-        .qa-assistant-main {
-            width: min(100%, 840px);
-            min-width: 0;
-        }
-
-        .qa-answer-card {
-            background: var(--qa-panel);
-            border: 1px solid var(--qa-border);
+        /* Bot Answer Card */
+        .answer-card {
+            background: var(--panel-solid);
+            border: 1px solid var(--border);
             border-radius: 20px;
-            padding: 1rem;
-            box-shadow: var(--qa-shadow);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            margin-bottom: 12px;
         }
-
-        .qa-answer-label {
-            font-size: 0.7rem;
+        .answer-label {
+            font-size: 11px;
             font-weight: 700;
             letter-spacing: 0.08em;
-            color: var(--qa-muted);
+            color: var(--muted);
+            margin-bottom: 12px;
             text-transform: uppercase;
-            margin-bottom: 0.65rem;
         }
-
-        .qa-answer-text {
-            color: var(--qa-text);
-            font-size: 1rem;
+        .answer-main {
+            font-size: 16px;
             line-height: 1.6;
+            margin-bottom: 16px;
+            color: var(--text);
             white-space: pre-wrap;
-            margin-bottom: 0.85rem;
         }
 
-        .qa-citations {
-            margin-bottom: 0.45rem;
-        }
-
-        .qa-citation {
+        /* Bot Citations & Chips */
+        .citation-badge {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             min-width: 28px;
             height: 28px;
-            margin-right: 0.35rem;
-            margin-bottom: 0.35rem;
-            padding: 0 0.32rem;
-            border: 1px solid var(--qa-border);
+            border: 1px solid var(--border);
             border-radius: 8px;
             background: #f8fafc;
             color: #4e5a72;
-            font-size: 0.8rem;
-            font-weight: 600;
+            font-size: 13px;
+            margin-right: 6px;
+            margin-bottom: 12px;
+            font-weight: 500;
         }
-
-        .qa-source-preview {
-            color: var(--qa-muted);
-            font-size: 0.82rem;
-            line-height: 1.45;
-            margin-bottom: 0.75rem;
+        .source-line {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.4;
+            margin-bottom: 6px;
         }
-
-        .qa-source-line {
-            margin: 0.12rem 0;
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+            margin-top: 6px;
         }
-
-        .qa-badge-row {
-            margin-top: 0.15rem;
-        }
-
-        .qa-badge {
-            display: inline-block;
-            margin: 0 0.35rem 0.35rem 0;
-            padding: 0.38rem 0.65rem;
+        .chip {
             border-radius: 999px;
-            background: var(--qa-chip);
+            background: var(--chip);
             border: 1px solid #d7dfeb;
             color: #53617d;
-            font-size: 0.75rem;
-            line-height: 1;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 500;
         }
 
-        .qa-composer-shell {
-            padding: 0.55rem 0 0.65rem 0;
+        /* Expander override */
+        [data-testid="stExpander"] {
+            border: 1px solid var(--border) !important;
+            border-radius: 14px !important;
+            background: #fafbfd !important;
+            box-shadow: none !important;
+        }
+        [data-testid="stExpander"] summary {
+            padding: 12px 16px !important;
+        }
+        [data-testid="stExpander"] summary p {
+            font-weight: 600 !important;
+            color: var(--text) !important;
+            font-size: 14px !important;
         }
 
-        .qa-composer-row {
-            margin-bottom: 0.35rem;
+        /* ----------------------------------- */
+        /* FULL-WIDTH FLOATING COMPOSER        */
+        /* ----------------------------------- */
+        div[data-testid="stVerticalBlock"]:has(> div.element-container #qa-composer-anchor) {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100vw !important;
+            background: linear-gradient(to top, rgba(246,247,251,1) 75%, rgba(246,247,251,0.9));
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(223,227,234,0.85);
+            z-index: 99999;
+            box-shadow: var(--shadow-footer);
+            display: flex;
+            justify-content: center;
+            padding: 16px 0 24px 0;
+        }
+        div[data-testid="stVerticalBlock"]:has(> div.element-container #qa-composer-anchor) > div {
+            max-width: var(--content-width) !important;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 1rem;
         }
 
-        .qa-send-wrap {
-            padding-top: 0.18rem;
-        }
-
-        .qa-input-wrap {
-            background: transparent;
-            border: 0;
-            padding: 0;
-            box-shadow: none;
-        }
-
-        .qa-chip-note {
-            color: var(--qa-muted);
-            font-size: 0.72rem;
-            margin-bottom: 0.18rem;
-        }
-
-        .qa-prompt-row {
-            margin-bottom: 0.18rem;
-        }
-
-        .qa-composer-help {
-            color: var(--qa-muted);
-            font-size: 0.72rem;
-            line-height: 1.35;
-            margin-top: 0.18rem;
-        }
-
-        div[data-testid="stTextArea"] {
-            margin-bottom: 0 !important;
-        }
-
+        /* Text Area / Input styling */
         div[data-testid="stTextArea"] > div {
-            background: var(--qa-panel) !important;
-            border: 1px solid var(--qa-border) !important;
-            border-radius: 18px !important;
-            box-shadow: var(--qa-shadow) !important;
-            padding: 0.55rem 0.7rem !important;
+            background: var(--panel-solid) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: var(--radius) !important;
+            box-shadow: 0 4px 12px rgba(18, 31, 53, 0.04) !important;
+            padding: 10px 14px !important;
         }
-
         div[data-testid="stTextArea"] textarea {
             border: 0 !important;
             outline: none !important;
             box-shadow: none !important;
             background: transparent !important;
-            color: var(--qa-text) !important;
-            min-height: 44px !important;
-            max-height: 92px !important;
+            color: var(--text) !important;
+            min-height: 52px !important;
+            max-height: 120px !important;
             padding: 0 !important;
-            font-size: 0.94rem !important;
-            line-height: 1.45 !important;
-            resize: none !important;
+            font-size: 15px !important;
+            line-height: 1.5 !important;
         }
 
-        div[data-testid="stButton"] > button {
-            border-radius: 999px;
+        /* Composer Action Area */
+        .composer-bottom-layout {
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
         }
-
-        .qa-send-wrap div[data-testid="stButton"] > button,
-        div[data-testid="stButton"] > button[kind="primary"] {
-            width: 42px !important;
-            min-width: 42px !important;
-            height: 42px !important;
-            padding: 0 !important;
-            border-radius: 999px !important;
-            font-size: 1.15rem !important;
-            background: var(--qa-accent) !important;
-            border: 0 !important;
-            box-shadow: none !important;
-        }
-
-        .qa-clear-wrap div[data-testid="stButton"] > button {
-            border: 1px solid var(--qa-border) !important;
-            background: var(--qa-panel) !important;
-            color: var(--qa-text) !important;
-            border-radius: 12px !important;
-            padding: 0.68rem 1rem !important;
-            min-height: 44px !important;
-            box-shadow: 0 2px 8px rgba(18, 31, 53, 0.04);
-        }
-
-        .qa-prompts-wrap div[data-testid="stButton"] > button {
-            width: 100% !important;
-            border: 1px solid var(--qa-border) !important;
+        
+        /* Suggestion Buttons */
+        .suggestion-col div[data-testid="stButton"] > button {
+            border: 1px solid var(--border) !important;
             background: #ffffff !important;
-            color: #44506a !important;
             border-radius: 999px !important;
-            padding: 0.3rem 0.45rem !important;
-            font-size: 0.7rem !important;
+            padding: 8px 14px !important;
+            font-size: 13px !important;
+            color: #44506a !important;
+            white-space: nowrap !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+            min-height: auto !important;
             line-height: 1.2 !important;
-            white-space: normal !important;
-            text-align: center !important;
-            min-height: 34px !important;
-            box-shadow: none !important;
+        }
+        .suggestion-col div[data-testid="stButton"] > button:hover {
+            border-color: var(--accent) !important;
+            color: var(--accent) !important;
         }
 
-        @media (max-width: 768px) {
-            :root {
-                --qa-header-height: 136px;
-                --qa-composer-height: 206px;
-            }
-
-            .block-container {
-                padding-top: calc(var(--qa-header-height) + 1.2rem);
-                padding-bottom: calc(var(--qa-composer-height) + 1.2rem);
-            }
-
-            .qa-header-row {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .qa-clear-wrap {
-                align-self: flex-end;
-                width: 100%;
-                max-width: 120px;
-            }
-
-            .qa-user-bubble {
-                max-width: 92%;
-            }
-
-            .qa-assistant-main {
-                width: 100%;
-            }
-
-            .qa-composer-shell {
-                padding-bottom: 0.55rem;
-            }
-
-            .qa-composer-help {
-                font-size: 0.7rem;
-            }
+        /* Send Button */
+        .send-btn-wrap div[data-testid="stButton"] > button {
+            width: 48px !important;
+            min-width: 48px !important;
+            height: 48px !important;
+            border-radius: 999px !important;
+            border: 0 !important;
+            background: var(--accent) !important;
+            color: #fff !important;
+            font-size: 24px !important;
+            cursor: pointer !important;
+            padding: 0 !important;
+            box-shadow: 0 4px 12px rgba(15, 139, 141, 0.25) !important;
+            float: right;
+            transition: transform 0.1s ease;
+        }
+        .send-btn-wrap div[data-testid="stButton"] > button:active {
+            transform: scale(0.95);
         }
         </style>
         """,
@@ -505,50 +398,37 @@ def _render_badges(response) -> None:
         f"Synthesis: {response.synthesis_method.replace('_', ' ').title()}",
     ]
     badge_html = "".join(
-        f"<span class='qa-badge'>{html.escape(badge)}</span>" for badge in badges
+        f"<span class='chip'>{html.escape(badge)}</span>" for badge in badges
     )
-    st.markdown(f"<div class='qa-badge-row'>{badge_html}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='chips'>{badge_html}</div>", unsafe_allow_html=True)
 
 
 def _render_user_message(question: str) -> None:
     st.markdown(
-        (
-            "<div class='qa-user-row'>"
-            "<div class='qa-user-message'>"
-            f"<div class='qa-user-bubble'>{html.escape(question)}</div>"
-            "<div class='qa-avatar qa-avatar-user'>You</div>"
-            "</div>"
-            "</div>"
-        ),
+        f"<div class='message-row user'><div class='message-bubble'>{html.escape(question)}</div></div>",
         unsafe_allow_html=True,
     )
 
 
 def _render_answer_card(response) -> None:
     display_sources = _deduplicate_display_sources(response.sources_used)
-    citation_markers = " ".join(
-        f"<span class='qa-citation'>[{index}]</span>"
-        for index, _ in enumerate(display_sources, start=1)
-    )
-    source_preview = display_sources[:3]
-    preview_html = "".join(
-        (
-            f"<div class='qa-source-line'><strong>[{index}]</strong> "
-            f"{html.escape(source)}</div>"
+    
+    st.markdown("<div class='answer-label'>ANSWER</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='answer-main'>{html.escape(response.answer)}</div>", unsafe_allow_html=True)
+
+    if display_sources:
+        citation_markers = "".join(
+            f"<span class='citation-badge'>[{index}]</span>"
+            for index, _ in enumerate(display_sources, start=1)
         )
-        for index, source in enumerate(source_preview, start=1)
-    )
-    st.markdown(
-        (
-            "<div class='qa-answer-card'>"
-            "<div class='qa-answer-label'>Answer</div>"
-            f"<div class='qa-answer-text'>{html.escape(response.answer)}</div>"
-            f"<div class='qa-citations'>{citation_markers}</div>"
-            f"<div class='qa-source-preview'>{preview_html}</div>"
-            "</div>"
-        ),
-        unsafe_allow_html=True,
-    )
+        st.markdown(f"<div>{citation_markers}</div>", unsafe_allow_html=True)
+
+        source_preview = display_sources[:3]
+        preview_html = "".join(
+            f"<div class='source-line'>[{index}] {html.escape(source)}</div>"
+            for index, source in enumerate(source_preview, start=1)
+        )
+        st.markdown(f"<div class='source-container'>{preview_html}</div>", unsafe_allow_html=True)
 
 
 def _render_answer_details(response) -> None:
@@ -600,19 +480,11 @@ def _render_answer_details(response) -> None:
 
 
 def _render_assistant_message(response) -> None:
-    st.markdown(
-        (
-            "<div class='qa-assistant-row'>"
-            "<div class='qa-assistant-message'>"
-            "<div class='qa-avatar qa-avatar-assistant'>Q</div>"
-            "<div class='qa-assistant-main'>"
-        ),
-        unsafe_allow_html=True,
-    )
+    st.markdown("<div class='answer-card'>", unsafe_allow_html=True)
     _render_answer_card(response)
     _render_badges(response)
     _render_answer_details(response)
-    st.markdown("</div></div></div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _extract_topic_prompts(question: str) -> list[str]:
@@ -685,24 +557,21 @@ def _build_dynamic_prompt_chips(conversation_history: list[dict[str, object]], c
 
 
 def _render_header(status_line: str) -> None:
-    st.markdown("<div id='qa-header-anchor'></div>", unsafe_allow_html=True)
     with st.container():
-        st.markdown("<div class='qa-header-shell'>", unsafe_allow_html=True)
-        header_cols = st.columns([12, 2], gap="large")
+        st.markdown("<span id='qa-header-anchor'></span>", unsafe_allow_html=True)
+        header_cols = st.columns([8, 2], gap="large")
         with header_cols[0]:
             st.markdown(
                 (
-                    "<div class='qa-header-row'>"
-                    "<div class='qa-brand-wrap'>"
-                    "<div class='qa-title'>QuestAI</div>"
-                    f"<div class='qa-status-line'>{html.escape(status_line)}</div>"
-                    "</div>"
+                    "<div class='brand-wrap'>"
+                    "<h1 class='brand'>QuestAI</h1>"
+                    f"<div class='meta'>{html.escape(status_line)}</div>"
                     "</div>"
                 ),
                 unsafe_allow_html=True,
             )
         with header_cols[1]:
-            st.markdown("<div class='qa-clear-wrap'>", unsafe_allow_html=True)
+            st.markdown("<div class='header-clear-wrap'>", unsafe_allow_html=True)
             st.button(
                 "Clear",
                 key="clear-conversation-button",
@@ -711,37 +580,50 @@ def _render_header(status_line: str) -> None:
                 on_click=_clear_conversation,
             )
             st.markdown("</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_conversation(conversation_history: list[dict[str, object]]) -> None:
-    st.markdown("<div class='qa-chat-region'><div class='qa-chat-shell'>", unsafe_allow_html=True)
+    st.markdown("<div class='chat-inner'>", unsafe_allow_html=True)
     for turn in conversation_history:
         _render_user_message(str(turn["question"]))
         _render_assistant_message(turn["response"])
-    st.markdown("</div></div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_composer(prompt_chips: list[str], answer_service: AnswerService) -> None:
-    st.markdown("<div id='qa-composer-anchor'></div>", unsafe_allow_html=True)
     with st.container():
-        st.markdown("<div class='qa-composer-shell'>", unsafe_allow_html=True)
-        st.markdown("<div class='qa-composer-row'>", unsafe_allow_html=True)
-        composer_cols = st.columns([14, 1], gap="small")
+        st.markdown("<span id='qa-composer-anchor'></span>", unsafe_allow_html=True)
+        
+        st.text_area(
+            "Message QuestAI",
+            key=QUESTION_INPUT_KEY,
+            height=60,
+            placeholder="Ask about policy guidance, customer data, or a cautious combined question.",
+            label_visibility="collapsed",
+        )
+
+        composer_cols = st.columns([10, 2], gap="small", vertical_alignment="center")
         with composer_cols[0]:
-            st.markdown("<div class='qa-input-wrap'>", unsafe_allow_html=True)
-            st.text_area(
-                "Message QuestAI",
-                key=QUESTION_INPUT_KEY,
-                height=60,
-                placeholder="Ask about policy guidance, customer data, or a cautious combined question.",
-                label_visibility="collapsed",
-            )
-            st.markdown("</div>", unsafe_allow_html=True)
+            if prompt_chips:
+                chip_col_count = len(prompt_chips)
+                if chip_col_count > 0:
+                    chip_cols = st.columns(chip_col_count, gap="small")
+                    for index, prompt in enumerate(prompt_chips):
+                        with chip_cols[index]:
+                            st.markdown("<div class='suggestion-col'>", unsafe_allow_html=True)
+                            st.button(
+                                prompt,
+                                key=f"prompt-chip-{index}",
+                                use_container_width=True,
+                                on_click=_set_question,
+                                args=(prompt,),
+                            )
+                            st.markdown("</div>", unsafe_allow_html=True)
+
         with composer_cols[1]:
-            st.markdown("<div class='qa-send-wrap'>", unsafe_allow_html=True)
+            st.markdown("<div class='send-btn-wrap'>", unsafe_allow_html=True)
             st.button(
-                ">",
+                "›",
                 key="send-question",
                 type="primary",
                 use_container_width=True,
@@ -749,28 +631,6 @@ def _render_composer(prompt_chips: list[str], answer_service: AnswerService) -> 
                 args=(answer_service,),
             )
             st.markdown("</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        if prompt_chips:
-            st.markdown("<div class='qa-chip-note'>Suggested prompts</div>", unsafe_allow_html=True)
-            prompt_cols = st.columns(len(prompt_chips), gap="small")
-            for index, prompt in enumerate(prompt_chips):
-                with prompt_cols[index]:
-                    st.markdown("<div class='qa-prompts-wrap qa-prompt-row'>", unsafe_allow_html=True)
-                    st.button(
-                        prompt,
-                        key=f"prompt-chip-{index}",
-                        use_container_width=True,
-                        on_click=_set_question,
-                        args=(prompt,),
-                    )
-                    st.markdown("</div>", unsafe_allow_html=True)
-
-        st.markdown(
-            "<div class='qa-composer-help'>Recent conversation context is passed in lightly for follow-up questions.</div>",
-            unsafe_allow_html=True,
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def run_app() -> None:
@@ -838,14 +698,15 @@ def run_app() -> None:
         f"Chunks: {len(chunks)} | "
         f"CSV: {dataset_info.file_name if dataset_info.dataset_found and dataset_info.file_name else 'Not loaded'}"
     )
+    
     _render_header(status_line)
 
     if synthesis_status_code != "success":
-        st.markdown("<div class='qa-status-note'>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-bottom: 10px;'>", unsafe_allow_html=True)
         st.caption(synthesis_status_message)
         st.markdown("</div>", unsafe_allow_html=True)
     if skipped_pdf_issues:
-        st.markdown("<div class='qa-status-note'>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-bottom: 10px;'>", unsafe_allow_html=True)
         st.caption(
             "Skipped PDF files: "
             + "; ".join(f"{issue.file_name} ({issue.reason})" for issue in skipped_pdf_issues)
