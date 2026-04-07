@@ -22,247 +22,369 @@ def _inject_styles() -> None:
     st.markdown(
         """
         <style>
-        /* ── Piilota Streamlitin omat UI-elementit ── */
-        #MainMenu { visibility: hidden; }
-        header[data-testid="stHeader"] { display: none !important; }
-        footer { display: none !important; }
-        div[data-testid="stDecoration"] { display: none !important; }
-        div[data-testid="stToolbar"] { display: none !important; }
+        :root {
+            --qa-bg: #f6f7fb;
+            --qa-panel: #ffffff;
+            --qa-border: #dfe3ea;
+            --qa-text: #162033;
+            --qa-muted: #6d7890;
+            --qa-accent: #0f8b8d;
+            --qa-chip: #eef2f8;
+            --qa-shadow: 0 8px 30px rgba(18, 31, 53, 0.08);
+            --qa-content-width: 900px;
+            --qa-header-height: 116px;
+            --qa-composer-height: 168px;
+        }
 
-        /* ── Sivun pääsäiliö ── */
+        html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"], .stApp {
+            background: var(--qa-bg);
+        }
+
         .block-container {
-            max-width: 900px;
+            max-width: var(--qa-content-width);
+            padding-top: calc(var(--qa-header-height) + 1.4rem);
+            padding-bottom: calc(var(--qa-composer-height) + 1.5rem);
+        }
+
+        #qa-header-anchor + div {
+            position: fixed;
+            inset: 0 0 auto 0;
+            z-index: 20;
+            background: rgba(246, 247, 251, 0.96);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(223, 227, 234, 0.85);
+        }
+
+        #qa-composer-anchor + div {
+            position: fixed;
+            inset: auto 0 0 0;
+            z-index: 20;
+            background: linear-gradient(to top, rgba(246, 247, 251, 0.98), rgba(246, 247, 251, 0.92));
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(223, 227, 234, 0.85);
+            padding: 0.55rem 0 0.8rem 0;
+        }
+
+        #qa-header-anchor + div > div,
+        #qa-composer-anchor + div > div {
+            width: min(calc(100vw - 24px), var(--qa-content-width));
             margin: 0 auto;
-            padding-top: 8rem;
-            padding-bottom: 18rem;
-            padding-left: 1rem;
-            padding-right: 1rem;
         }
 
-        /* ── Kiinteä header ── */
-        div[data-testid="stVerticalBlock"] > div:has(> div > .qa-header-anchor) {
-            position: fixed;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: min(900px, 100vw);
-            z-index: 999;
-            background: rgba(255, 255, 255, 0.97);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            padding: 0 1rem;
+        .qa-header-shell {
+            min-height: var(--qa-header-height);
+            display: flex;
+            align-items: center;
         }
 
-        /* ── Kiinteä composer (tekstinsyöttöalue) ── */
-        div[data-testid="stVerticalBlock"] > div:has(> div > .qa-composer-anchor) {
-            position: fixed;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: min(900px, 100vw);
-            z-index: 999;
-            background: rgba(255, 255, 255, 0.97);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            padding: 0 1rem;
-            border-top: 1px solid rgba(17, 24, 39, 0.08);
-        }
-
-        /* ── Header-tyyli ── */
-        .qa-header-dock {
-            padding: 0.75rem 0 0.65rem 0;
-            border-bottom: 1px solid rgba(17, 24, 39, 0.08);
-            background: transparent;
-        }
         .qa-header-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 1rem;
+            width: 100%;
         }
+
+        .qa-brand-wrap {
+            min-width: 0;
+        }
+
         .qa-title {
-            font-size: 1.5rem;
+            margin: 0 0 0.25rem 0;
+            color: var(--qa-text);
+            font-size: 1.95rem;
             font-weight: 700;
             letter-spacing: -0.03em;
-            color: #111827;
-            margin: 0;
+            line-height: 1.05;
         }
-        .qa-status-line {
-            color: #5b6474;
-            font-size: 0.78rem;
-            line-height: 1.45;
-            margin-top: 0.2rem;
-        }
-        .qa-status-note { margin-top: 0.3rem; }
 
-        /* ── Keskusteluvirta ── */
-        .qa-conversation-shell {
-            padding: 0.5rem 0 1rem 0;
+        .qa-status-line {
+            color: var(--qa-muted);
+            font-size: 0.83rem;
+            line-height: 1.45;
         }
-        .qa-user-wrap {
+
+        .qa-status-note {
+            margin: 0.25rem 0 0 0;
+        }
+
+        .qa-chat-region {
+            padding-top: 1.8rem;
+            padding-bottom: 0.5rem;
+        }
+
+        .qa-chat-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+        }
+
+        .qa-user-row {
             display: flex;
             justify-content: flex-end;
-            margin: 0.75rem 0;
+            width: 100%;
         }
+
         .qa-user-message {
             display: flex;
             align-items: flex-end;
-            gap: 0.5rem;
-            max-width: 80%;
             justify-content: flex-end;
-        }
-        .qa-user-bubble {
-            background: #f0f2f5;
-            border: 1px solid #e2e7ef;
-            border-radius: 16px 16px 4px 16px;
-            padding: 0.75rem 1rem;
-            color: #111827;
-            line-height: 1.58;
-            white-space: pre-wrap;
-            font-size: 0.95rem;
-        }
-        .qa-assistant-wrap {
-            display: flex;
-            justify-content: flex-start;
-            margin: 0.75rem 0 1rem 0;
-        }
-        .qa-assistant-message {
-            display: flex;
-            align-items: flex-start;
             gap: 0.65rem;
             width: 100%;
         }
-        .qa-assistant-main {
-            flex: 1;
-            min-width: 0;
+
+        .qa-user-bubble {
+            max-width: 78%;
+            background: #e9edf4;
+            border: 1px solid #dbe1e8;
+            border-radius: 18px 18px 8px 18px;
+            padding: 0.9rem 1rem;
+            color: var(--qa-text);
+            font-size: 0.96rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            box-shadow: 0 3px 12px rgba(18, 31, 53, 0.05);
         }
+
+        .qa-assistant-row {
+            display: flex;
+            justify-content: flex-start;
+            width: 100%;
+        }
+
+        .qa-assistant-message {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+            width: 100%;
+        }
+
         .qa-avatar {
-            width: 1.75rem;
-            height: 1.75rem;
-            border-radius: 50%;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 999px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.72rem;
-            font-weight: 700;
             flex-shrink: 0;
-            margin-top: 0.15rem;
+            font-size: 0.76rem;
+            font-weight: 700;
         }
+
         .qa-avatar-user {
             background: #dfe4eb;
             color: #3f4957;
             border: 1px solid #cfd7e2;
         }
+
         .qa-avatar-assistant {
             background: #e8eef7;
             color: #1f3b5b;
             border: 1px solid #d3dfef;
         }
+
+        .qa-assistant-main {
+            width: min(100%, 840px);
+            min-width: 0;
+        }
+
         .qa-answer-card {
-            border: 1px solid rgba(49, 51, 63, 0.12);
-            border-radius: 4px 16px 16px 16px;
-            background: #ffffff;
-            padding: 0.9rem 1rem;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+            background: var(--qa-panel);
+            border: 1px solid var(--qa-border);
+            border-radius: 20px;
+            padding: 1rem;
+            box-shadow: var(--qa-shadow);
         }
+
         .qa-answer-label {
-            font-size: 0.72rem;
+            font-size: 0.7rem;
             font-weight: 700;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.08em;
+            color: var(--qa-muted);
             text-transform: uppercase;
-            color: #9ca3af;
-            margin-bottom: 0.4rem;
+            margin-bottom: 0.65rem;
         }
+
         .qa-answer-text {
-            color: #111827;
-            font-size: 0.97rem;
-            line-height: 1.75;
+            color: var(--qa-text);
+            font-size: 1rem;
+            line-height: 1.6;
             white-space: pre-wrap;
+            margin-bottom: 0.85rem;
         }
-        .qa-citations { margin-top: 0.6rem; }
+
+        .qa-citations {
+            margin-bottom: 0.45rem;
+        }
+
         .qa-citation {
-            display: inline-block;
-            margin: 0 0.25rem 0.25rem 0;
-            padding: 0.05rem 0.32rem;
-            border-radius: 6px;
-            background: #f3f5f8;
-            border: 1px solid #e2e7ef;
-            color: #374151;
-            font-size: 0.78rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            height: 28px;
+            margin-right: 0.35rem;
+            margin-bottom: 0.35rem;
+            padding: 0 0.32rem;
+            border: 1px solid var(--qa-border);
+            border-radius: 8px;
+            background: #f8fafc;
+            color: #4e5a72;
+            font-size: 0.8rem;
             font-weight: 600;
         }
+
         .qa-source-preview {
-            margin-top: 0.45rem;
-            color: #596579;
-            font-size: 0.83rem;
+            color: var(--qa-muted);
+            font-size: 0.82rem;
+            line-height: 1.45;
+            margin-bottom: 0.75rem;
         }
-        .qa-source-line { margin: 0.12rem 0; }
-        .qa-badge-row { margin-top: 0.6rem; }
+
+        .qa-source-line {
+            margin: 0.12rem 0;
+        }
+
+        .qa-badge-row {
+            margin-top: 0.15rem;
+        }
+
         .qa-badge {
             display: inline-block;
-            margin: 0 0.3rem 0.3rem 0;
-            padding: 0.15rem 0.5rem;
+            margin: 0 0.35rem 0.35rem 0;
+            padding: 0.38rem 0.65rem;
             border-radius: 999px;
-            border: 1px solid #d7deea;
-            background: #eef2f7;
-            color: #334155;
-            font-size: 0.74rem;
+            background: var(--qa-chip);
+            border: 1px solid #d7dfeb;
+            color: #53617d;
+            font-size: 0.75rem;
+            line-height: 1;
         }
 
-        /* ── Composer (alatunniste + tekstikenttä) ── */
-        .qa-composer-dock {
-            padding: 0.65rem 0 0.85rem 0;
+        .qa-composer-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
         }
-        .qa-chip-note {
-            color: #6b7280;
-            font-size: 0.76rem;
-            margin-bottom: 0.3rem;
+
+        .qa-input-wrap {
+            background: transparent;
+            border: 0;
+            padding: 0;
+            box-shadow: none;
         }
+
         .qa-composer-help {
-            color: #9ca3af;
-            font-size: 0.74rem;
-            margin-top: 0.3rem;
+            color: var(--qa-muted);
+            font-size: 0.78rem;
+            line-height: 1.4;
+            padding-top: 0.2rem;
         }
 
-        /* Textarea pyöristys */
+        .qa-chip-note {
+            color: var(--qa-muted);
+            font-size: 0.75rem;
+            margin-bottom: 0.22rem;
+        }
+
+        .qa-prompt-row {
+            margin-bottom: 0.15rem;
+        }
+
+        div[data-testid="stTextArea"] {
+            margin-bottom: 0;
+        }
+
+        div[data-testid="stTextArea"] > div {
+            background: var(--qa-panel) !important;
+            border: 1px solid var(--qa-border) !important;
+            border-radius: 18px !important;
+            box-shadow: var(--qa-shadow) !important;
+            padding: 0.7rem !important;
+        }
+
         div[data-testid="stTextArea"] textarea {
-            border-radius: 14px !important;
-            min-height: 90px !important;
-            font-size: 0.92rem !important;
-        }
-
-        /* Send-nappi pyöristys */
-        div[data-testid="stButton"] > button[kind="primary"] {
-            border-radius: 999px !important;
-            min-width: 2.4rem !important;
-            width: 2.4rem !important;
-            height: 2.4rem !important;
+            border: 0 !important;
+            outline: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+            color: var(--qa-text) !important;
+            min-height: 54px !important;
+            max-height: 124px !important;
             padding: 0 !important;
-            font-size: 1rem !important;
+            font-size: 0.94rem !important;
+            line-height: 1.5 !important;
+            resize: none !important;
         }
 
-        /* Prompt chip -napit */
-        div[data-testid="stButton"] > button:not([kind="primary"]) {
+        div[data-testid="stButton"] > button {
+            border-radius: 999px;
+        }
+
+        div[data-testid="stButton"] > button[kind="primary"] {
+            width: 44px !important;
+            min-width: 44px !important;
+            height: 44px !important;
+            padding: 0 !important;
             border-radius: 999px !important;
-            font-size: 0.8rem !important;
-            padding: 0.25rem 0.75rem !important;
+            font-size: 1.2rem !important;
+            background: var(--qa-accent) !important;
+            border: 0 !important;
         }
 
-        /* ── Mobiili ── */
-        @media (max-width: 640px) {
+        .qa-clear-wrap div[data-testid="stButton"] > button {
+            border: 1px solid var(--qa-border) !important;
+            background: var(--qa-panel) !important;
+            color: var(--qa-text) !important;
+            border-radius: 12px !important;
+            padding: 0.68rem 1rem !important;
+            min-height: 44px !important;
+            box-shadow: 0 2px 8px rgba(18, 31, 53, 0.04);
+        }
+
+        .qa-prompts-wrap div[data-testid="stButton"] > button {
+            border: 1px solid var(--qa-border) !important;
+            background: #ffffff !important;
+            color: #44506a !important;
+            border-radius: 999px !important;
+            padding: 0.22rem 0.6rem !important;
+            font-size: 0.72rem !important;
+            line-height: 1.2 !important;
+            white-space: normal !important;
+            text-align: center !important;
+            min-height: 30px !important;
+            box-shadow: none !important;
+        }
+
+        @media (max-width: 768px) {
+            :root {
+                --qa-header-height: 136px;
+                --qa-composer-height: 210px;
+            }
+
             .block-container {
-                padding-top: 7.5rem;
-                padding-bottom: 20rem;
-                padding-left: 0.5rem;
-                padding-right: 0.5rem;
+                padding-top: calc(var(--qa-header-height) + 1.2rem);
+                padding-bottom: calc(var(--qa-composer-height) + 1.2rem);
             }
-            div[data-testid="stVerticalBlock"] > div:has(> div > .qa-header-anchor),
-            div[data-testid="stVerticalBlock"] > div:has(> div > .qa-composer-anchor) {
-                width: 100vw;
-                padding: 0 0.5rem;
+
+            .qa-header-row {
+                flex-direction: column;
+                align-items: flex-start;
             }
-            .qa-title { font-size: 1.2rem; }
-            .qa-user-message { max-width: 90%; }
+
+            .qa-clear-wrap {
+                align-self: flex-end;
+                width: 100%;
+                max-width: 120px;
+            }
+
+            .qa-user-bubble {
+                max-width: 92%;
+            }
+
+            .qa-assistant-main {
+                width: 100%;
+            }
         }
         </style>
         """,
@@ -663,11 +785,7 @@ def run_app() -> None:
         issue for issue in document_load_issues if issue.source_type == "pdf"
     ]
 
-    st.set_page_config(
-        page_title="QuestAI",
-        layout="centered",
-        initial_sidebar_state="collapsed",
-    )
+    st.set_page_config(page_title="QuestAI", layout="centered")
     _ensure_session_state()
     _inject_styles()
 
