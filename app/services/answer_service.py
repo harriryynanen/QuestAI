@@ -78,6 +78,7 @@ class AnswerService:
         resolved_customer_names = self._resolve_customer_names_from_context(
             question=question,
             conversation_turns=conversation_turns,
+            dataframe=dataframe,
         )
 
         if route == "unknown":
@@ -299,6 +300,8 @@ class AnswerService:
         route: str,
         matched_customer_name: str | None = None,
         matched_field_name: str | None = None,
+        matched_customer_names: list[str] | None = None,
+        product_name: str | None = None,
     ) -> list[str]:
         if route == "retrieval":
             return [
@@ -327,6 +330,13 @@ class AnswerService:
             ]
 
         if route == "combined":
+            if matched_customer_names:
+                product_label = product_name or "this product"
+                return [
+                    f"Which companies are not broadly aligned with {product_label}?",
+                    "Which companies show caution flags?",
+                    "What does the policy say about tax arrears?",
+                ]
             return [
                 "What does the policy say about tax arrears?",
                 "Which customers have tax arrears?",
@@ -412,7 +422,11 @@ class AnswerService:
                 limitations="Please first identify the customer set clearly, for example by listing the customers or asking for a filter result.",
                 route="combined",
                 retrieved_chunks=[],
-                follow_up_questions=self._get_follow_up_questions(route="combined"),
+                follow_up_questions=self._get_follow_up_questions(
+                    route="combined",
+                    matched_customer_names=resolved_customer_names,
+                    product_name=semantic_plan.product_name if semantic_plan else None,
+                ),
                 matched_customer_name=None,
                 matched_customer_names=None,
                 matched_field_name=semantic_plan.field_name if semantic_plan else None,
@@ -477,7 +491,11 @@ class AnswerService:
                 ),
                 route="combined",
                 retrieved_chunks=[],
-                follow_up_questions=self._get_follow_up_questions(route="combined"),
+                follow_up_questions=self._get_follow_up_questions(
+                    route="combined",
+                    matched_customer_names=resolved_customer_names,
+                    product_name=semantic_plan.product_name if semantic_plan else None,
+                ),
                 matched_customer_name=semantic_plan.customer_name if semantic_plan else None,
                 matched_field_name=semantic_plan.field_name if semantic_plan else None,
                 synthesis_method="fallback",
@@ -532,7 +550,10 @@ class AnswerService:
             limitations=fallback_summary.limitations,
             route="combined",
             retrieved_chunks=selected_chunks,
-            follow_up_questions=self._get_follow_up_questions(route="combined"),
+            follow_up_questions=self._get_follow_up_questions(
+                route="combined",
+                product_name=semantic_plan.product_name if semantic_plan else None,
+            ),
             matched_customer_name=semantic_plan.customer_name if semantic_plan else None,
             matched_field_name=semantic_plan.field_name if semantic_plan else None,
             synthesis_method=fallback_summary.synthesis_method,
@@ -565,7 +586,10 @@ class AnswerService:
                 limitations="Please restate the customer set before asking for a grouped preliminary view.",
                 route="combined",
                 retrieved_chunks=[],
-                follow_up_questions=self._get_follow_up_questions(route="combined"),
+                follow_up_questions=self._get_follow_up_questions(
+                    route="combined",
+                    product_name=semantic_plan.product_name if semantic_plan else None,
+                ),
                 matched_customer_name=None,
                 matched_customer_names=None,
                 matched_field_name=semantic_plan.field_name if semantic_plan else None,
@@ -597,7 +621,11 @@ class AnswerService:
                 limitations="A resolvable customer set and readable CSV evidence are required for grouped combined assessment.",
                 route="combined",
                 retrieved_chunks=selected_chunks,
-                follow_up_questions=self._get_follow_up_questions(route="combined"),
+                follow_up_questions=self._get_follow_up_questions(
+                    route="combined",
+                    matched_customer_names=resolved_customer_names,
+                    product_name=semantic_plan.product_name if semantic_plan else None,
+                ),
                 matched_customer_name=None,
                 matched_customer_names=resolved_customer_names,
                 matched_field_name=semantic_plan.field_name if semantic_plan else None,
@@ -619,6 +647,8 @@ class AnswerService:
             combined_sources.append(dataset_info_file_name)
 
         answer = self._build_group_combined_summary(assessments)
+        if self._asks_for_negative_group_subset(question):
+            answer = self._build_negative_group_combined_summary(assessments)
         if semantic_plan and semantic_plan.product_name:
             answer = f"Preliminary grouped view for {semantic_plan.product_name}:\n{answer}"
 
@@ -638,7 +668,11 @@ class AnswerService:
             limitations=limitations,
             route="combined",
             retrieved_chunks=selected_chunks,
-            follow_up_questions=self._get_follow_up_questions(route="combined"),
+            follow_up_questions=self._get_follow_up_questions(
+                route="combined",
+                matched_customer_names=resolved_customer_names,
+                product_name=semantic_plan.product_name if semantic_plan else None,
+            ),
             matched_customer_name=None,
             matched_customer_names=resolved_customer_names,
             matched_field_name=semantic_plan.field_name if semantic_plan else None,
@@ -693,6 +727,34 @@ class AnswerService:
             for item in bucket_items:
                 sections.append(f"- {item.customer_name} - {item.reason}")
         return "\n".join(sections)
+
+    def _build_negative_group_combined_summary(
+        self,
+        assessments: list[CustomerAssessment],
+    ) -> str:
+        sections: list[str] = []
+        caution_items = [item for item in assessments if item.bucket == "caution"]
+        insufficient_items = [
+            item for item in assessments if item.bucket == "not_enough_information"
+        ]
+
+        if caution_items:
+            sections.append("Companies that show caution or mixed signals:")
+            for item in caution_items:
+                sections.append(f"- {item.customer_name} - {item.reason}")
+
+        if insufficient_items:
+            sections.append("Companies without enough information for a positive preliminary view:")
+            for item in insufficient_items:
+                sections.append(f"- {item.customer_name} - {item.reason}")
+
+        if sections:
+            return "\n".join(sections)
+
+        return (
+            "I did not identify companies outside the broadly aligned group from the current evidence pack. "
+            "That is still a preliminary view, not a final eligibility decision."
+        )
 
     def _derive_group_support_level(
         self,
@@ -865,17 +927,36 @@ class AnswerService:
         self,
         question: str,
         conversation_turns: list[dict[str, object]] | None,
+        dataframe,
     ) -> list[str] | None:
         if not conversation_turns:
             return None
 
-        previous_response = conversation_turns[-1]["response"]
-        normalized = question.lower()
-        if previous_response.route != "structured":
+        if dataframe is None or "customer_name" not in dataframe.columns:
             return None
 
-        if any(term in normalized for term in ("those", "them", "they", "same ones")):
-            return previous_response.matched_customer_names
+        customer_names = dataframe["customer_name"].astype(str).tolist()
+        previous_response = conversation_turns[-1]["response"]
+        previous_question = str(conversation_turns[-1]["question"])
+        normalized = question.lower()
+
+        if previous_response.route == "structured":
+            if any(term in normalized for term in ("those", "them", "they", "same ones")):
+                return previous_response.matched_customer_names
+            return None
+
+        if previous_response.route == "combined":
+            if not (
+                self._looks_like_group_reference(question)
+                or self._looks_like_elliptical_group_follow_up(question)
+            ):
+                return None
+
+            if previous_response.matched_customer_names:
+                return previous_response.matched_customer_names
+
+            if self._question_implies_full_dataset_scope(previous_question):
+                return customer_names
 
         return None
 
@@ -885,7 +966,16 @@ class AnswerService:
         conversation_turns: list[dict[str, object]] | None,
     ) -> SemanticPlanningResult | None:
         normalized = question.lower()
+        previous_question = None
+        previous_response = None
+        if conversation_turns:
+            previous_turn = conversation_turns[-1]
+            previous_question = str(previous_turn["question"])
+            previous_response = previous_turn["response"]
+
         product_name = self._extract_product_name(question)
+        if product_name is None and previous_question:
+            product_name = self._extract_product_name(previous_question)
         combined_terms = (
             "aligned",
             "fit",
@@ -897,15 +987,32 @@ class AnswerService:
             "product",
         )
         scope_terms = ("those customers", "these customers", "listed customers", "those", "these")
+        if previous_response is not None and previous_response.route == "combined":
+            if product_name and self._looks_like_elliptical_group_follow_up(question):
+                return SemanticPlanningResult(
+                    plan=SemanticQueryPlan(
+                        route="combined",
+                        operation="preliminary_assessment",
+                        customer_name=None,
+                        field_name=None,
+                        product_name=product_name,
+                        document_topic=f"{product_name} criteria",
+                        comparison_direction=None,
+                        filter_value=None,
+                        needs_documents=True,
+                        needs_structured_data=True,
+                        confidence="high",
+                        reason="Short follow-up reuses the immediately previous grouped combined scope and product context.",
+                        method="heuristic_fallback",
+                    ),
+                    status="success",
+                    failure_reason=None,
+                )
+
         if not product_name or not any(term in normalized for term in combined_terms):
             return None
         if not any(term in normalized for term in scope_terms):
             return None
-
-        scope = self._resolve_customer_names_from_context(
-            question=question,
-            conversation_turns=conversation_turns,
-        )
 
         return SemanticPlanningResult(
             plan=SemanticQueryPlan(
@@ -939,7 +1046,68 @@ class AnswerService:
         normalized = question.lower()
         return any(
             term in normalized
-            for term in ("those customers", "these customers", "listed customers", "those", "these")
+            for term in (
+                "those customers",
+                "these customers",
+                "listed customers",
+                "those companies",
+                "these companies",
+                "those",
+                "these",
+            )
+        )
+
+    def _looks_like_elliptical_group_follow_up(self, question: str) -> bool:
+        normalized = question.lower()
+        if "which" not in normalized:
+            return False
+
+        negative_terms = (
+            " are not",
+            " not ",
+            "not eligible",
+            "do not fit",
+            "don't fit",
+            "not aligned",
+            "do not align",
+        )
+        reference_terms = ("companies", "customers", "ones", "which are", "which companies", "which customers")
+        return any(term in normalized for term in negative_terms) and any(
+            term in normalized for term in reference_terms
+        )
+
+    def _question_implies_full_dataset_scope(self, question: str) -> bool:
+        normalized = question.lower()
+        return any(
+            phrase in normalized
+            for phrase in (
+                "all of the companies",
+                "all companies",
+                "all of the customers",
+                "all customers",
+                "companies in the data",
+                "customers in the data",
+                "companies in data",
+                "customers in data",
+            )
+        )
+
+    def _asks_for_negative_group_subset(self, question: str) -> bool:
+        normalized = question.lower()
+        return any(
+            phrase in normalized
+            for phrase in (
+                "which companies are not",
+                "which customers are not",
+                "which ones are not",
+                "which are not eligible",
+                "which companies are not eligible",
+                "which customers are not eligible",
+                "which ones do not fit",
+                "which companies do not fit",
+                "which customers do not fit",
+                "which ones are not aligned",
+            )
         )
 
     def _build_unclear_routing_response(

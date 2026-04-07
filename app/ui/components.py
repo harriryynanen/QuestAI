@@ -115,21 +115,6 @@ def render_composer(
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
-        if prompt_chips:
-            st.markdown("<div class='qa-chip-note'>Suggested prompts</div>", unsafe_allow_html=True)
-            st.markdown("<div class='qa-prompts-wrap'>", unsafe_allow_html=True)
-            for index, prompt in enumerate(prompt_chips):
-                st.markdown("<div class='qa-prompt-chip'>", unsafe_allow_html=True)
-                st.button(
-                    prompt,
-                    key=f"prompt-chip-{index}",
-                    use_container_width=False,
-                    on_click=set_question_callback,
-                    args=(prompt,),
-                )
-                st.markdown("</div>", unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
-
         composer_cols = st.columns([12, 1], gap="small")
         with composer_cols[0]:
             st.markdown(
@@ -145,6 +130,21 @@ def render_composer(
                 on_click=submit_callback,
                 args=(answer_service,),
             )
+
+        if prompt_chips:
+            st.markdown("<div class='qa-chip-note'>Suggested prompts</div>", unsafe_allow_html=True)
+            prompt_cols = st.columns(len(prompt_chips), gap="small")
+            for index, prompt in enumerate(prompt_chips):
+                with prompt_cols[index]:
+                    st.markdown("<div class='qa-prompt-chip'>", unsafe_allow_html=True)
+                    st.button(
+                        prompt,
+                        key=f"prompt-chip-{index}",
+                        use_container_width=True,
+                        on_click=set_question_callback,
+                        args=(prompt,),
+                    )
+                    st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
 

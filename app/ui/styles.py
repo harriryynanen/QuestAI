@@ -260,6 +260,7 @@ div[data-testid="stVerticalBlock"] > div:has(> div > #qa-composer-anchor) > div 
 .qa-chip-note {
     color: var(--qa-muted);
     font-size: 0.76rem;
+    margin-top: 0.2rem;
     margin-bottom: 0.25rem;
 }
 
@@ -272,6 +273,7 @@ div[data-testid="stVerticalBlock"] > div:has(> div > #qa-composer-anchor) > div 
 
 .qa-prompt-chip {
     display: inline-block;
+    width: 100%;
 }
 
 .qa-composer-help {
