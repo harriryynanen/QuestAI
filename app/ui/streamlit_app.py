@@ -63,8 +63,9 @@ def run_app() -> None:
         retrieval_context_max_characters=config.retrieval_context_max_characters,
     )
     documents = document_store.list_documents()
-    retrieval_documents = document_store.load_retrieval_documents()
-    document_load_issues = document_store.get_document_load_issues()
+    retrieval_bundle = document_store.load_retrieval_bundle()
+    retrieval_documents = retrieval_bundle.documents
+    document_load_issues = retrieval_bundle.issues
     chunks = chunker.chunk_documents(retrieval_documents)
     dataset_info = customer_data_loader.get_data_info()
     markdown_count = sum(1 for document in retrieval_documents if document.source_type == "markdown")

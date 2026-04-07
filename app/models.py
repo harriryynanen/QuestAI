@@ -79,6 +79,12 @@ class DocumentLoadIssue:
 
 
 @dataclass(frozen=True)
+class DocumentLoadResult:
+    documents: list["DocumentRecord"]
+    issues: list[DocumentLoadIssue]
+
+
+@dataclass(frozen=True)
 class DocumentChunk:
     chunk_id: str
     document_id: str

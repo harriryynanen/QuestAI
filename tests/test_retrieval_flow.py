@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from models import DocumentRecord, RetrievalSynthesisResult
+from models import DocumentLoadResult, DocumentRecord, RetrievalSynthesisResult
 
 
 def test_retrieval_flow_returns_grounded_sources(
@@ -105,15 +105,18 @@ def test_retrieval_flow_can_cite_pdf_sources(
         planning_result=planning_result,
         retrieval_result=retrieval_result,
     )
-    service.document_store.load_retrieval_documents = lambda: [
-        DocumentRecord(
-            document_id="policy_pdf",
-            file_name="policy.pdf",
-            path=Path("policy.pdf"),
-            text="## Page 1\nUnresolved tax arrears should be escalated.",
-            source_type="pdf",
-        )
-    ]
+    service.document_store.load_retrieval_bundle = lambda: DocumentLoadResult(
+        documents=[
+            DocumentRecord(
+                document_id="policy_pdf",
+                file_name="policy.pdf",
+                path=Path("policy.pdf"),
+                text="## Page 1\nUnresolved tax arrears should be escalated.",
+                source_type="pdf",
+            )
+        ],
+        issues=[],
+    )
 
     response = service.answer_question("What does the policy say about tax arrears?")
 

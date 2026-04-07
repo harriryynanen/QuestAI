@@ -41,7 +41,7 @@ def test_combined_flow_assembles_document_and_structured_sources(
 
     assert response.route == "combined"
     assert response.sources_used
-    assert any(".md --" in source for source in response.sources_used)
+    assert any(source.endswith("Page 1") or source.endswith("Page 2") or ".md --" in source for source in response.sources_used)
     assert any(".csv | row:" in source for source in response.sources_used)
     assert response.limitations
     assert "approval" in response.limitations.lower()

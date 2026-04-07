@@ -2,11 +2,11 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-from models import DocumentInfo, DocumentLoadIssue, DocumentRecord
+from models import DocumentInfo, DocumentLoadIssue, DocumentLoadResult, DocumentRecord
 
 
 class DocumentStore:
-    SUPPORTED_EXTENSIONS = (".md", ".txt", ".pdf")
+    DISCOVERABLE_EXTENSIONS = (".md", ".pdf")
     RETRIEVAL_EXTENSIONS = (".md", ".pdf")
     MARKDOWN_EXTENSION = ".md"
     PDF_EXTENSION = ".pdf"
@@ -21,7 +21,7 @@ class DocumentStore:
 
         documents: list[DocumentInfo] = []
         for path in sorted(self.docs_path.iterdir()):
-            if not path.is_file() or path.suffix.lower() not in self.SUPPORTED_EXTENSIONS:
+            if not path.is_file() or path.suffix.lower() not in self.DISCOVERABLE_EXTENSIONS:
                 continue
 
             documents.append(
@@ -37,12 +37,14 @@ class DocumentStore:
         return documents
 
     def load_retrieval_documents(self) -> list[DocumentRecord]:
-        documents, _ = self._load_retrieval_documents_with_issues()
-        return documents
+        return self.load_retrieval_bundle().documents
 
     def get_document_load_issues(self) -> list[DocumentLoadIssue]:
-        _, issues = self._load_retrieval_documents_with_issues()
-        return issues
+        return self.load_retrieval_bundle().issues
+
+    def load_retrieval_bundle(self) -> DocumentLoadResult:
+        documents, issues = self._load_retrieval_documents_with_issues()
+        return DocumentLoadResult(documents=documents, issues=issues)
 
     def load_markdown_documents(self) -> list[DocumentRecord]:
         if not self.docs_path.exists() or not self.docs_path.is_dir():
@@ -176,6 +178,4 @@ class DocumentStore:
             return "markdown"
         if extension == self.PDF_EXTENSION:
             return "pdf"
-        if extension == ".txt":
-            return "text"
         return None

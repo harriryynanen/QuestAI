@@ -29,8 +29,9 @@ def test_pdf_document_is_loaded_when_text_extraction_succeeds(workspace_tmp_dir,
         lambda path: "## Page 1\nTax arrears should be treated cautiously.",
     )
 
-    documents = store.load_retrieval_documents()
-    issues = store.get_document_load_issues()
+    bundle = store.load_retrieval_bundle()
+    documents = bundle.documents
+    issues = bundle.issues
 
     assert len(documents) == 1
     assert documents[0].file_name == "policy.pdf"
@@ -46,8 +47,9 @@ def test_empty_pdf_is_skipped_gracefully(workspace_tmp_dir, monkeypatch):
     store = DocumentStore(workspace_tmp_dir, pdf_min_text_characters=20)
     monkeypatch.setattr(store, "_extract_pdf_text", lambda path: "too short")
 
-    documents = store.load_retrieval_documents()
-    issues = store.get_document_load_issues()
+    bundle = store.load_retrieval_bundle()
+    documents = bundle.documents
+    issues = bundle.issues
 
     assert documents == []
     assert len(issues) == 1
@@ -75,4 +77,40 @@ def test_mixed_markdown_and_pdf_documents_enter_same_retrieval_flow(workspace_tm
     assert any(document.source_type == "markdown" for document in documents)
     assert any(document.source_type == "pdf" for document in documents)
     assert any(chunk.file_name == "notes.pdf" for chunk in chunks)
-    assert any(chunk.section_heading == "Extracted text" or chunk.section_heading == "Page 1" for chunk in chunks)
+    assert any(chunk.section_heading == "Page 1" for chunk in chunks)
+
+
+def test_retrieval_bundle_loads_documents_and_issues_in_one_pass(workspace_tmp_dir, monkeypatch):
+    markdown_path = workspace_tmp_dir / "guide.md"
+    markdown_path.write_text("# Policy\nPolicy text.\n", encoding="utf-8")
+    pdf_path = workspace_tmp_dir / "notes.pdf"
+    pdf_path.write_bytes(b"%PDF-test")
+
+    store = DocumentStore(workspace_tmp_dir, pdf_min_text_characters=10)
+    call_count = {"count": 0}
+
+    def fake_extract(path):
+        call_count["count"] += 1
+        return "## Page 1\nPDF policy text."
+
+    monkeypatch.setattr(store, "_extract_pdf_text", fake_extract)
+
+    bundle = store.load_retrieval_bundle()
+
+    assert len(bundle.documents) == 2
+    assert bundle.issues == []
+    assert call_count["count"] == 1
+
+
+def test_list_documents_matches_mvp_supported_types(workspace_tmp_dir):
+    markdown_path = workspace_tmp_dir / "guide.md"
+    markdown_path.write_text("# Policy\nPolicy text.\n", encoding="utf-8")
+    pdf_path = workspace_tmp_dir / "notes.pdf"
+    pdf_path.write_bytes(b"%PDF-test")
+    txt_path = workspace_tmp_dir / "legacy.txt"
+    txt_path.write_text("Legacy text", encoding="utf-8")
+
+    store = DocumentStore(workspace_tmp_dir)
+    listed_extensions = {document.extension for document in store.list_documents()}
+
+    assert listed_extensions == {".md", ".pdf"}

@@ -13,7 +13,7 @@ class MarkdownChunker:
 
     def _chunk_document(self, document: DocumentRecord) -> list[DocumentChunk]:
         chunks: list[DocumentChunk] = []
-        current_heading: str | None = "Extracted text" if document.source_type == "pdf" else None
+        current_heading: str | None = None
         buffer: list[str] = []
         chunk_index = 1
 
@@ -54,7 +54,7 @@ class MarkdownChunker:
         self._flush_buffer(
             chunks=chunks,
             document=document,
-            section_heading=current_heading,
+            section_heading=self._resolved_heading(document, current_heading),
             buffer=buffer,
             chunk_index=chunk_index,
         )
@@ -85,7 +85,7 @@ class MarkdownChunker:
                     document_id=document.document_id,
                     file_name=document.file_name,
                     text=piece,
-                    section_heading=section_heading,
+                    section_heading=self._resolved_heading(document, section_heading),
                 )
             )
             chunk_index += 1
@@ -93,3 +93,14 @@ class MarkdownChunker:
 
         buffer.clear()
         return chunk_index
+
+    def _resolved_heading(
+        self,
+        document: DocumentRecord,
+        section_heading: str | None,
+    ) -> str | None:
+        if section_heading:
+            return section_heading
+        if document.source_type == "pdf":
+            return "Extracted text"
+        return None
