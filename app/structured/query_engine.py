@@ -3,7 +3,7 @@ from difflib import SequenceMatcher
 
 import pandas as pd
 
-from models import CombinedEvidence, SemanticQueryPlan, StructuredQueryResult
+from models import CombinedEvidence, CustomerAssessment, SemanticQueryPlan, StructuredQueryResult
 
 
 class StructuredQueryEngine:
@@ -195,6 +195,51 @@ class StructuredQueryEngine:
             sources_used=sources_used,
             missing_information=missing_information,
         )
+
+    def build_group_combined_evidence(
+        self,
+        dataframe: pd.DataFrame | None,
+        dataset_file_name: str | None,
+        customer_names: list[str],
+        product_name: str | None,
+    ) -> tuple[list[CustomerAssessment], list[str], list[str]]:
+        if dataframe is None or dataset_file_name is None:
+            return [], [], ["Structured customer data is not available."]
+
+        product_fields = self.PRODUCT_FIELDS.get(product_name or "", self.GENERIC_COMBINED_FIELDS)
+        assessments: list[CustomerAssessment] = []
+        merged_sources: list[str] = []
+        missing_information: list[str] = []
+
+        for customer_name in customer_names:
+            matches = dataframe.loc[dataframe["customer_name"] == customer_name]
+            if matches.empty:
+                assessments.append(
+                    CustomerAssessment(
+                        customer_name=customer_name,
+                        bucket="not_enough_information",
+                        reason="No matching customer row was found in the current dataset.",
+                        sources_used=[dataset_file_name],
+                    )
+                )
+                continue
+
+            row = matches.iloc[0]
+            assessment = self._assess_customer_alignment(
+                row=row,
+                dataset_file_name=dataset_file_name,
+                product_name=product_name,
+                relevant_fields=product_fields,
+            )
+            assessments.append(assessment)
+            for source in assessment.sources_used:
+                if source not in merged_sources:
+                    merged_sources.append(source)
+
+        if not assessments:
+            missing_information.append("No customer rows were available for group assessment.")
+
+        return assessments, merged_sources, missing_information
 
     def _answer_with_heuristics(
         self,
@@ -902,6 +947,100 @@ class StructuredQueryEngine:
             "requested_product_interest": "requested product interest",
         }
         return labels[field_name]
+
+    def _assess_customer_alignment(
+        self,
+        row: pd.Series,
+        dataset_file_name: str,
+        product_name: str | None,
+        relevant_fields: tuple[str, ...],
+    ) -> CustomerAssessment:
+        customer_name = str(row["customer_name"])
+        sources_used = [
+            f"{dataset_file_name} | row: {customer_name} | column: {field_name}"
+            for field_name in relevant_fields
+            if field_name in row.index and not pd.isna(row[field_name])
+        ]
+
+        financials_value = str(row.get("latest_financials_available", "")).lower()
+        tax_arrears_value = str(row.get("has_tax_arrears", "")).lower()
+        payment_delays_value = str(row.get("payment_delays_12m", "")).lower()
+
+        missing_required = []
+        for field_name in ("latest_financials_available", "equity_ratio_pct", "years_in_operation"):
+            if field_name in relevant_fields and (field_name not in row.index or pd.isna(row[field_name])):
+                missing_required.append(self._field_label(field_name))
+
+        if financials_value == "no" and "latest_financials_available" in relevant_fields:
+            missing_required.append("latest financial statements")
+
+        if missing_required:
+            return CustomerAssessment(
+                customer_name=customer_name,
+                bucket="not_enough_information",
+                reason=f"Missing or unavailable key information: {', '.join(sorted(set(missing_required)))}.",
+                sources_used=sources_used or [f"{dataset_file_name} | row: {customer_name}"],
+            )
+
+        caution_reasons: list[str] = []
+        if tax_arrears_value == "yes":
+            caution_reasons.append("tax arrears are present")
+        if payment_delays_value == "repeated":
+            caution_reasons.append("repeated payment delays are visible")
+        if financials_value == "no":
+            caution_reasons.append("latest financial statements are unavailable")
+
+        if "debt_to_ebitda" in row.index and not pd.isna(row.get("debt_to_ebitda")):
+            try:
+                if float(row["debt_to_ebitda"]) > 4.0:
+                    caution_reasons.append("debt to EBITDA is elevated")
+            except (TypeError, ValueError):
+                pass
+
+        if caution_reasons:
+            return CustomerAssessment(
+                customer_name=customer_name,
+                bucket="caution",
+                reason=", ".join(caution_reasons).capitalize() + ".",
+                sources_used=sources_used or [f"{dataset_file_name} | row: {customer_name}"],
+            )
+
+        positive_signals: list[str] = []
+        if "equity_ratio_pct" in row.index and not pd.isna(row.get("equity_ratio_pct")):
+            try:
+                if float(row["equity_ratio_pct"]) >= 25.0:
+                    positive_signals.append("equity ratio is solid")
+            except (TypeError, ValueError):
+                pass
+        if "years_in_operation" in row.index and not pd.isna(row.get("years_in_operation")):
+            try:
+                if float(row["years_in_operation"]) >= 3:
+                    positive_signals.append("operating history is established")
+            except (TypeError, ValueError):
+                pass
+        if "ebitda_eur" in row.index and not pd.isna(row.get("ebitda_eur")):
+            try:
+                if float(row["ebitda_eur"]) > 0:
+                    positive_signals.append("EBITDA is positive")
+            except (TypeError, ValueError):
+                pass
+        if product_name and str(row.get("requested_product_interest", "")).lower() == product_name.lower():
+            positive_signals.append("requested product interest matches")
+
+        if len(positive_signals) >= 2:
+            return CustomerAssessment(
+                customer_name=customer_name,
+                bucket="broadly_aligned",
+                reason=", ".join(positive_signals[:3]).capitalize() + ".",
+                sources_used=sources_used or [f"{dataset_file_name} | row: {customer_name}"],
+            )
+
+        return CustomerAssessment(
+            customer_name=customer_name,
+            bucket="caution",
+            reason="Available signals are mixed and do not support a stronger preliminary view.",
+            sources_used=sources_used or [f"{dataset_file_name} | row: {customer_name}"],
+        )
 
     def _format_value(self, field_name: str, value: object) -> str:
         if field_name in {"latest_revenue_eur", "ebitda_eur"}:

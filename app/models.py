@@ -22,6 +22,7 @@ Operation = Literal[
     "preliminary_assessment",
     "unknown",
 ]
+AssessmentBucket = Literal["broadly_aligned", "caution", "not_enough_information"]
 
 
 @dataclass(frozen=True)
@@ -173,3 +174,11 @@ class CombinedEvidence:
     summary: str
     sources_used: list[str]
     missing_information: list[str]
+
+
+@dataclass(frozen=True)
+class CustomerAssessment:
+    customer_name: str
+    bucket: AssessmentBucket
+    reason: str
+    sources_used: list[str]

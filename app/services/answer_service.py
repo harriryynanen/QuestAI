@@ -2,6 +2,7 @@ from llm.openai_client import OpenAIAppClient
 from models import (
     AnswerResponse,
     CombinedEvidence,
+    CustomerAssessment,
     RetrievalSynthesisResult,
     RetrievedChunk,
     RoutingDecision,
@@ -58,6 +59,13 @@ class AnswerService:
         )
         if resolved_follow_up is not None:
             planning_result = resolved_follow_up
+
+        group_combined_follow_up = self._resolve_group_combined_follow_up(
+            question=question,
+            conversation_turns=conversation_turns,
+        )
+        if group_combined_follow_up is not None:
+            planning_result = group_combined_follow_up
 
         routing_decision = self._route_question(question, planning_result)
         route = routing_decision.route
@@ -128,6 +136,7 @@ class AnswerService:
             dataframe=dataframe,
             dataset_file_name=dataset_file_name,
             dataset_info_file_name=dataset_info.file_name if dataset_info.dataset_found else None,
+            resolved_customer_names=resolved_customer_names,
         )
 
     def _build_retrieval_response(
@@ -393,7 +402,43 @@ class AnswerService:
         dataframe,
         dataset_file_name: str | None,
         dataset_info_file_name: str | None,
+        resolved_customer_names: list[str] | None = None,
     ) -> AnswerResponse:
+        if self._looks_like_group_reference(question) and resolved_customer_names is None:
+            return AnswerResponse(
+                answer="I could not determine which customers you mean for this grouped preliminary assessment.",
+                sources_used=[dataset_info_file_name] if dataset_info_file_name else [],
+                support_level="low",
+                limitations="Please first identify the customer set clearly, for example by listing the customers or asking for a filter result.",
+                route="combined",
+                retrieved_chunks=[],
+                follow_up_questions=self._get_follow_up_questions(route="combined"),
+                matched_customer_name=None,
+                matched_customer_names=None,
+                matched_field_name=semantic_plan.field_name if semantic_plan else None,
+                synthesis_method="deterministic",
+                synthesis_status=None,
+                synthesis_status_message=None,
+                routing_method=routing_decision.method,
+                routing_confidence=routing_decision.confidence,
+                routing_reason=routing_decision.reason,
+                planning_method=semantic_plan.method if semantic_plan else None,
+                planning_reason=self._build_planning_reason(planning_result),
+            )
+
+        if resolved_customer_names:
+            return self._build_group_combined_response(
+                question=question,
+                routing_decision=routing_decision,
+                planning_result=planning_result,
+                semantic_plan=semantic_plan,
+                chunks=chunks,
+                dataframe=dataframe,
+                dataset_file_name=dataset_file_name,
+                dataset_info_file_name=dataset_info_file_name,
+                resolved_customer_names=resolved_customer_names,
+            )
+
         retrieval_query = self._build_combined_retrieval_query(question, semantic_plan)
         retrieved_chunks = self.retriever.retrieve(question=retrieval_query, chunks=chunks)
         selected_chunks = self._select_retrieval_chunks(retrieved_chunks) if retrieved_chunks else []
@@ -500,6 +545,113 @@ class AnswerService:
             planning_reason=self._build_planning_reason(planning_result),
         )
 
+    def _build_group_combined_response(
+        self,
+        question: str,
+        routing_decision: RoutingDecision,
+        planning_result: SemanticPlanningResult,
+        semantic_plan: SemanticQueryPlan | None,
+        chunks: list,
+        dataframe,
+        dataset_file_name: str | None,
+        dataset_info_file_name: str | None,
+        resolved_customer_names: list[str],
+    ) -> AnswerResponse:
+        if not resolved_customer_names:
+            return AnswerResponse(
+                answer="I could not determine which customers you mean for this combined assessment.",
+                sources_used=[dataset_info_file_name] if dataset_info_file_name else [],
+                support_level="low",
+                limitations="Please restate the customer set before asking for a grouped preliminary view.",
+                route="combined",
+                retrieved_chunks=[],
+                follow_up_questions=self._get_follow_up_questions(route="combined"),
+                matched_customer_name=None,
+                matched_customer_names=None,
+                matched_field_name=semantic_plan.field_name if semantic_plan else None,
+                synthesis_method="deterministic",
+                synthesis_status=None,
+                synthesis_status_message=None,
+                routing_method=routing_decision.method,
+                routing_confidence=routing_decision.confidence,
+                routing_reason=routing_decision.reason,
+                planning_method=semantic_plan.method if semantic_plan else None,
+                planning_reason=self._build_planning_reason(planning_result),
+            )
+
+        retrieval_query = self._build_combined_retrieval_query(question, semantic_plan)
+        retrieved_chunks = self.retriever.retrieve(question=retrieval_query, chunks=chunks)
+        selected_chunks = self._select_retrieval_chunks(retrieved_chunks) if retrieved_chunks else []
+        assessments, structured_sources, missing_information = self.structured_query_engine.build_group_combined_evidence(
+            dataframe=dataframe,
+            dataset_file_name=dataset_file_name,
+            customer_names=resolved_customer_names,
+            product_name=semantic_plan.product_name if semantic_plan else None,
+        )
+
+        if not assessments:
+            return AnswerResponse(
+                answer="I could not assemble enough structured customer evidence for a grouped preliminary view.",
+                sources_used=structured_sources or ([dataset_info_file_name] if dataset_info_file_name else []),
+                support_level="low",
+                limitations="A resolvable customer set and readable CSV evidence are required for grouped combined assessment.",
+                route="combined",
+                retrieved_chunks=selected_chunks,
+                follow_up_questions=self._get_follow_up_questions(route="combined"),
+                matched_customer_name=None,
+                matched_customer_names=resolved_customer_names,
+                matched_field_name=semantic_plan.field_name if semantic_plan else None,
+                synthesis_method="deterministic",
+                synthesis_status=None,
+                synthesis_status_message=None,
+                routing_method=routing_decision.method,
+                routing_confidence=routing_decision.confidence,
+                routing_reason=routing_decision.reason,
+                planning_method=semantic_plan.method if semantic_plan else None,
+                planning_reason=self._build_planning_reason(planning_result),
+            )
+
+        combined_sources = self._merge_sources(
+            self._build_chunk_sources(selected_chunks),
+            structured_sources,
+        )
+        if not combined_sources and dataset_info_file_name:
+            combined_sources.append(dataset_info_file_name)
+
+        answer = self._build_group_combined_summary(assessments)
+        if semantic_plan and semantic_plan.product_name:
+            answer = f"Preliminary grouped view for {semantic_plan.product_name}:\n{answer}"
+
+        limitations = (
+            "This grouped view is preliminary decision support only. "
+            "It combines retrieved document guidance with deterministic customer-level guardrails, "
+            "and it does not represent a final eligibility or approval decision."
+        )
+        if missing_information:
+            limitations += " Missing information was found for part of the customer set."
+
+        support_level = self._derive_group_support_level(selected_chunks, assessments, missing_information)
+        return AnswerResponse(
+            answer=answer,
+            sources_used=combined_sources,
+            support_level=support_level,
+            limitations=limitations,
+            route="combined",
+            retrieved_chunks=selected_chunks,
+            follow_up_questions=self._get_follow_up_questions(route="combined"),
+            matched_customer_name=None,
+            matched_customer_names=resolved_customer_names,
+            matched_field_name=semantic_plan.field_name if semantic_plan else None,
+            synthesis_method="deterministic",
+            synthesis_status=None,
+            synthesis_status_message=None,
+            routing_method=routing_decision.method,
+            routing_confidence=routing_decision.confidence,
+            routing_reason=routing_decision.reason,
+            planning_method=semantic_plan.method if semantic_plan else None,
+            planning_reason=self._build_planning_reason(planning_result),
+        )
+
     def _build_combined_retrieval_query(
         self,
         question: str,
@@ -522,6 +674,37 @@ class AnswerService:
         if planning_result.status == "success":
             return planning_result.plan.reason
         return planning_result.failure_reason
+
+    def _build_group_combined_summary(
+        self,
+        assessments: list[CustomerAssessment],
+    ) -> str:
+        bucket_order = [
+            ("broadly_aligned", "Broadly aligned based on available evidence"),
+            ("caution", "Caution / mixed signals"),
+            ("not_enough_information", "Not enough information"),
+        ]
+        sections: list[str] = []
+        for bucket_key, bucket_label in bucket_order:
+            bucket_items = [item for item in assessments if item.bucket == bucket_key]
+            if not bucket_items:
+                continue
+            sections.append(f"{bucket_label}:")
+            for item in bucket_items:
+                sections.append(f"- {item.customer_name} - {item.reason}")
+        return "\n".join(sections)
+
+    def _derive_group_support_level(
+        self,
+        selected_chunks: list[RetrievedChunk],
+        assessments: list[CustomerAssessment],
+        missing_information: list[str],
+    ) -> str:
+        if not selected_chunks or not assessments:
+            return "low"
+        if missing_information or any(item.bucket == "not_enough_information" for item in assessments):
+            return "medium"
+        return "high"
 
     def _merge_sources(self, *source_lists: list[str]) -> list[str]:
         merged: list[str] = []
@@ -695,6 +878,69 @@ class AnswerService:
             return previous_response.matched_customer_names
 
         return None
+
+    def _resolve_group_combined_follow_up(
+        self,
+        question: str,
+        conversation_turns: list[dict[str, object]] | None,
+    ) -> SemanticPlanningResult | None:
+        normalized = question.lower()
+        product_name = self._extract_product_name(question)
+        combined_terms = (
+            "aligned",
+            "fit",
+            "suitable",
+            "eligible",
+            "criteria",
+            "preliminary view",
+            "service",
+            "product",
+        )
+        scope_terms = ("those customers", "these customers", "listed customers", "those", "these")
+        if not product_name or not any(term in normalized for term in combined_terms):
+            return None
+        if not any(term in normalized for term in scope_terms):
+            return None
+
+        scope = self._resolve_customer_names_from_context(
+            question=question,
+            conversation_turns=conversation_turns,
+        )
+
+        return SemanticPlanningResult(
+            plan=SemanticQueryPlan(
+                route="combined",
+                operation="preliminary_assessment",
+                customer_name=None,
+                field_name=None,
+                product_name=product_name,
+                document_topic=f"{product_name} criteria",
+                comparison_direction=None,
+                filter_value=None,
+                needs_documents=True,
+                needs_structured_data=True,
+                confidence="high",
+                reason="Follow-up references a previously identified customer group for product alignment review.",
+                method="heuristic_fallback",
+            ),
+            status="success",
+            failure_reason=None,
+        )
+
+    def _extract_product_name(self, question: str) -> str | None:
+        known_products = ("AssetGrow Demo", "FlexLine Demo", "InvoiceBridge Demo")
+        normalized = question.lower()
+        matches = [product for product in known_products if product.lower() in normalized]
+        if len(matches) == 1:
+            return matches[0]
+        return None
+
+    def _looks_like_group_reference(self, question: str) -> bool:
+        normalized = question.lower()
+        return any(
+            term in normalized
+            for term in ("those customers", "these customers", "listed customers", "those", "these")
+        )
 
     def _build_unclear_routing_response(
         self,

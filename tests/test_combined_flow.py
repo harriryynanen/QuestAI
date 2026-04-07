@@ -87,3 +87,56 @@ def test_combined_support_is_capped_when_structured_evidence_is_missing(
     assert response.route == "combined"
     assert response.support_level == "low"
     assert response.limitations
+
+
+def test_group_combined_assessment_uses_referenced_customer_scope(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="unknown",
+            operation="unknown",
+            confidence="low",
+            reason="Use scoped follow-up fallback in tests.",
+        )
+    )
+    service = answer_service_factory(planning_result=planning_result)
+
+    first_response = service.answer_question("Which customers have tax arrears?")
+    grouped_response = service.answer_question(
+        "Which of those customers appear broadly aligned with AssetGrow Demo?",
+        conversation_turns=[{"question": "Which customers have tax arrears?", "response": first_response}],
+    )
+
+    assert grouped_response.route == "combined"
+    assert "Broadly aligned" in grouped_response.answer or "Caution / mixed signals" in grouped_response.answer
+    assert "Bright Forge Test Ltd" in grouped_response.answer
+    assert "eligible" not in grouped_response.answer.lower()
+    assert "approved" not in grouped_response.answer.lower()
+    assert any(".csv | row:" in source for source in grouped_response.sources_used)
+
+
+def test_group_combined_assessment_reports_unresolved_scope_clearly(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="unknown",
+            operation="unknown",
+            confidence="low",
+            reason="Use scoped follow-up fallback in tests.",
+        )
+    )
+    service = answer_service_factory(planning_result=planning_result)
+
+    response = service.answer_question(
+        "Which of those customers appear broadly aligned with AssetGrow Demo?"
+    )
+
+    assert response.route in {"combined", "unknown"}
+    assert response.support_level == "low"
+    assert "could not determine" in response.answer.lower() or "identify the customer set" in response.limitations.lower()

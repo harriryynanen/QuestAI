@@ -61,7 +61,7 @@ def build_semantic_plan_messages(
         "comparison_direction must be highest, lowest, or null. "
         "Use retrieval for questions about policies, guides, guidance, criteria, product descriptions, or document interpretation. "
         "Use structured for customer facts, filters, counts, list requests, existence checks, or comparisons from CSV data. "
-        "Use combined only when the question explicitly needs both document guidance and customer-specific structured data together. "
+        "Use combined when the question explicitly needs both document guidance and structured customer data together, including questions about which of a referenced customer group appear aligned with a product or criteria. "
         "Use unknown when the question is too unclear to map safely. "
         "If recent conversation context is provided, use it only to resolve follow-up references such as 'those customers', 'they', or 'that customer'. "
         "Do not repeat the previous operation blindly just because similar wording appeared in the context. "
