@@ -1,3 +1,5 @@
+import html
+
 import streamlit as st
 
 from config import build_app_config
@@ -16,6 +18,73 @@ QUESTION_INPUT_KEY = "question_input"
 LAST_RESPONSE_KEY = "last_response"
 
 
+def _inject_styles() -> None:
+    st.markdown(
+        """
+        <style>
+        .qa-answer-card {
+            border: 1px solid rgba(49, 51, 63, 0.14);
+            border-radius: 16px;
+            padding: 1.1rem 1rem 1rem 1rem;
+            background: linear-gradient(180deg, rgba(248, 249, 252, 0.92), rgba(255, 255, 255, 0.98));
+            margin: 0.4rem 0 0.75rem 0;
+        }
+        .qa-answer-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #5a6272;
+            margin-bottom: 0.55rem;
+        }
+        .qa-answer-text {
+            font-size: 1.04rem;
+            line-height: 1.65;
+            color: #1f2430;
+            white-space: pre-wrap;
+        }
+        .qa-badge-row {
+            margin: 0.35rem 0 0.25rem 0;
+        }
+        .qa-badge {
+            display: inline-block;
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            background: #eef2f7;
+            border: 1px solid #d7deea;
+            color: #334155;
+            font-size: 0.78rem;
+            margin: 0 0.35rem 0.35rem 0;
+        }
+        .qa-citations {
+            margin-top: 0.5rem;
+            color: #5b6474;
+            font-size: 0.86rem;
+        }
+        .qa-citation {
+            display: inline-block;
+            margin-right: 0.35rem;
+            padding: 0.06rem 0.34rem;
+            border-radius: 6px;
+            background: #f3f5f8;
+            border: 1px solid #e2e7ef;
+            color: #374151;
+            font-weight: 600;
+        }
+        .qa-source-summary {
+            margin-top: 0.55rem;
+            color: #4b5563;
+            font-size: 0.9rem;
+        }
+        .qa-source-line {
+            margin: 0.18rem 0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _set_question(question: str) -> None:
     st.session_state[QUESTION_INPUT_KEY] = question
 
@@ -27,6 +96,92 @@ def _submit_question(answer_service: AnswerService) -> None:
         return
 
     st.session_state[LAST_RESPONSE_KEY] = answer_service.answer_question(question)
+
+
+def _format_source_label(source: str) -> str:
+    if " | row:" in source:
+        return source
+    return source.replace(" -- ", " - ")
+
+
+def _render_badges(response) -> None:
+    badges = [
+        f"Route: {response.route.title()}",
+        f"Support: {response.support_level.title()}",
+        f"Synthesis: {response.synthesis_method.replace('_', ' ').title()}",
+    ]
+    badge_html = "".join(f"<span class='qa-badge'>{badge}</span>" for badge in badges)
+    st.markdown(f"<div class='qa-badge-row'>{badge_html}</div>", unsafe_allow_html=True)
+
+
+def _render_answer_card(response) -> None:
+    citation_markers = " ".join(
+        f"<span class='qa-citation'>[{index}]</span>"
+        for index, _ in enumerate(response.sources_used, start=1)
+    )
+    source_preview = response.sources_used[:2]
+    preview_html = "".join(
+        f"<div class='qa-source-line'><strong>[{index}]</strong> {html.escape(_format_source_label(source))}</div>"
+        for index, source in enumerate(source_preview, start=1)
+    )
+    st.markdown(
+        (
+            "<div class='qa-answer-card'>"
+            "<div class='qa-answer-title'>Answer</div>"
+            f"<div class='qa-answer-text'>{html.escape(response.answer)}</div>"
+            f"<div class='qa-citations'>{citation_markers}</div>"
+            f"<div class='qa-source-summary'>{preview_html}</div>"
+            "</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def _render_answer_details(response) -> None:
+    with st.expander("Why this answer", expanded=False):
+        st.caption(
+            f"Route: {response.route} | "
+            f"Support level: {response.support_level.title()} | "
+            f"Synthesis: {response.synthesis_method.replace('_', ' ').title()}"
+        )
+        if response.routing_reason:
+            st.caption(
+                f"Routing: {response.route} ({response.routing_method}, {response.routing_confidence} confidence) - "
+                f"{response.routing_reason}"
+            )
+        if response.planning_reason:
+            st.caption(
+                f"Structured planning: {response.planning_method} - {response.planning_reason}"
+            )
+        if response.synthesis_status_message:
+            st.caption(response.synthesis_status_message)
+
+        st.markdown("**Sources Used**")
+        if response.sources_used:
+            for index, source in enumerate(response.sources_used, start=1):
+                st.write(f"[{index}] {_format_source_label(source)}")
+        else:
+            st.write("No sources were used for this answer.")
+
+        if response.matched_customer_name or response.matched_field_name:
+            st.markdown("**Structured Match**")
+            if response.matched_customer_name:
+                st.write(f"Matched customer: {response.matched_customer_name}")
+            if response.matched_field_name:
+                st.write(f"Matched field: {response.matched_field_name}")
+
+        if response.retrieved_chunks:
+            st.markdown("**Retrieved Evidence**")
+            for item in response.retrieved_chunks:
+                heading = item.chunk.section_heading or "No heading"
+                st.write(
+                    f"- {item.chunk.file_name} -- {heading} | {item.chunk.chunk_id} | score={item.score:.1f}"
+                )
+                st.caption(item.match_summary)
+                st.caption(item.chunk.text)
+
+        st.markdown("**Limitations**")
+        st.write(response.limitations)
 
 
 def run_app() -> None:
@@ -76,6 +231,8 @@ def run_app() -> None:
     st.set_page_config(page_title=config.app_title, layout="centered")
     if QUESTION_INPUT_KEY not in st.session_state:
         st.session_state[QUESTION_INPUT_KEY] = ""
+
+    _inject_styles()
 
     st.title(config.app_title)
     st.write(config.app_description)
@@ -127,51 +284,9 @@ def run_app() -> None:
 
     with st.container():
         st.subheader("Answer")
-        st.write(response.answer)
-
-        st.caption(
-            f"Route: {response.route} | "
-            f"Support level: {response.support_level.title()} | "
-            f"Synthesis: {response.synthesis_method.replace('_', ' ').title()}"
-        )
-        if response.routing_reason:
-            st.caption(
-                f"Routing: {response.route} ({response.routing_method}, {response.routing_confidence} confidence) - "
-                f"{response.routing_reason}"
-            )
-        if response.planning_reason:
-            st.caption(
-                f"Structured planning: {response.planning_method} - {response.planning_reason}"
-            )
-        if response.synthesis_status_message:
-            st.caption(response.synthesis_status_message)
-
-        st.subheader("Sources Used")
-        if response.sources_used:
-            for source in response.sources_used:
-                st.write(f"- {source}")
-        else:
-            st.write("No sources were used for this answer.")
-
-        if response.matched_customer_name or response.matched_field_name:
-            with st.expander("Structured Match", expanded=False):
-                if response.matched_customer_name:
-                    st.write(f"Matched customer: {response.matched_customer_name}")
-                if response.matched_field_name:
-                    st.write(f"Matched field: {response.matched_field_name}")
-
-        if response.retrieved_chunks:
-            with st.expander("Retrieved Evidence", expanded=False):
-                for item in response.retrieved_chunks:
-                    heading = item.chunk.section_heading or "No heading"
-                    st.write(
-                        f"- {item.chunk.file_name} -- {heading} | {item.chunk.chunk_id} | score={item.score:.1f}"
-                    )
-                    st.caption(item.match_summary)
-                    st.caption(item.chunk.text)
-
-        st.subheader("Limitations")
-        st.write(response.limitations)
+        _render_answer_card(response)
+        _render_badges(response)
+        _render_answer_details(response)
 
     if response.follow_up_questions:
         with st.container():
