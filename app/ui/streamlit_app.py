@@ -23,20 +23,21 @@ def _inject_styles() -> None:
         """
         <style>
         :root {
-            --bg: #f5f7fc;
-            --panel: rgba(255,255,255,0.92);
+            --bg: #f6f7fb;
+            --panel: rgba(255,255,255,0.95);
             --panel-solid: #ffffff;
-            --border: #dfe6f1;
-            --text: #1a2333;
-            --muted: #73819a;
-            --accent: #16837f;
-            --chip: #eef3fb;
-            --header-height: 98px;
-            --composer-height: 156px;
+            --border: #dfe3ea;
+            --text: #162033;
+            --muted: #6d7890;
+            --accent: #0f8b8d;
+            --chip: #eef2f8;
+            --header-height: 104px;
+            --composer-height: 150px;
             --content-width: 760px;
             --radius: 18px;
-            --shadow: 0 10px 28px rgba(18, 31, 53, 0.08);
-            --shadow-soft: 0 18px 40px rgba(18, 31, 53, 0.10);
+            --shadow: 0 8px 30px rgba(18, 31, 53, 0.08);
+            --shadow-header: 0 4px 20px rgba(18, 31, 53, 0.04);
+            --shadow-footer: 0 -8px 30px rgba(18, 31, 53, 0.05);
         }
 
         html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"], .stApp {
@@ -45,46 +46,43 @@ def _inject_styles() -> None:
             font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
         }
 
+        /* Pad the main content area so it doesn't hide behind floating elements */
         .block-container {
             max-width: var(--content-width) !important;
-            padding-top: calc(var(--header-height) + 2.2rem) !important;
-            padding-bottom: calc(var(--composer-height) + 2.8rem) !important;
+            padding-top: calc(var(--header-height) + 2rem) !important;
+            padding-bottom: calc(var(--composer-height) + 2.5rem) !important;
         }
 
-        /* --- Header Anchor --- */
-        #qa-header-anchor + div {
+        /* ----------------------------------- */
+        /* FULL-WIDTH FLOATING HEADER          */
+        /* ----------------------------------- */
+        div[data-testid="stVerticalBlock"]:has(> div.element-container #qa-header-anchor) {
             position: fixed;
-            inset: 0 0 auto 0;
+            top: 0;
+            left: 0;
+            width: 100vw !important;
             height: var(--header-height);
-            background: linear-gradient(to bottom, rgba(245,247,252,0.98), rgba(245,247,252,0.92));
+            background: var(--panel);
             backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(223,227,234,0.72);
-            box-shadow: 0 8px 24px rgba(18, 31, 53, 0.05);
-            z-index: 999;
-            padding-top: 0.8rem;
+            border-bottom: 1px solid var(--border);
+            z-index: 99999;
+            box-shadow: var(--shadow-header);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem 0;
         }
-        #qa-header-anchor + div > div {
-            width: min(calc(100vw - 24px), var(--content-width));
+        div[data-testid="stVerticalBlock"]:has(> div.element-container #qa-header-anchor) > div {
+            max-width: var(--content-width) !important;
+            width: 100%;
             margin: 0 auto;
-            height: 100%;
+            padding: 0 1rem;
         }
 
-        /* Header Elements */
-        .header-inner {
-            width: 100%;
-        }
-        .header-dock {
-            width: 100%;
-            padding-bottom: 0.5rem;
-        }
-        .header-inner > div[data-testid="stHorizontalBlock"] {
-            align-items: center;
-        }
-        .brand-wrap {
-            min-width: 0;
-        }
+        /* Header typography */
+        .brand-wrap { min-width: 0; }
         .brand {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 700;
             margin: 0 0 4px 0;
             letter-spacing: -0.02em;
@@ -92,34 +90,30 @@ def _inject_styles() -> None:
             line-height: 1.2;
         }
         .meta {
-            font-size: 12px;
+            font-size: 13px;
             color: var(--muted);
             line-height: 1.35;
         }
 
-        /* Clear Button */
-        .header-clear-wrap {
-            display: flex;
-            justify-content: flex-end;
-        }
+        /* Clear button styling */
         .header-clear-wrap div[data-testid="stButton"] > button {
             border: 1px solid var(--border) !important;
             background: var(--panel-solid) !important;
             color: var(--text) !important;
             border-radius: 12px !important;
-            padding: 10px 16px !important;
-            font-size: 13px !important;
+            padding: 11px 18px !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
             cursor: pointer;
-            box-shadow: var(--shadow) !important;
+            box-shadow: 0 2px 8px rgba(18,31,53,0.04) !important;
             min-height: auto !important;
             height: auto !important;
+            float: right;
         }
 
-        /* --- Chat Region --- */
-        .conversation-shell {
-            width: 100%;
-            padding-top: 0.6rem;
-        }
+        /* ----------------------------------- */
+        /* CHAT MESSAGE STYLES                 */
+        /* ----------------------------------- */
         .chat-inner {
             display: flex;
             flex-direction: column;
@@ -129,54 +123,52 @@ def _inject_styles() -> None:
         .message-row {
             display: flex;
             width: 100%;
-            margin-bottom: 10px;
         }
         .message-row.user {
             justify-content: flex-end;
+            margin-bottom: 8px;
         }
         .message-bubble {
-            max-width: 66%;
-            border-radius: 16px;
-            padding: 12px 15px;
-            font-size: 14px;
+            max-width: 80%;
+            border-radius: var(--radius);
+            padding: 14px 18px;
+            font-size: 15px;
             line-height: 1.5;
-            box-shadow: var(--shadow);
             white-space: pre-wrap;
         }
         .message-row.user .message-bubble {
-            background: #eef2f8;
+            background: #e9edf4;
             color: var(--text);
-            border: 1px solid #e2e8f1;
-            border-top-right-radius: 8px;
+            border-top-right-radius: 6px;
         }
 
-        /* Answer Card */
+        /* Bot Answer Card */
         .answer-card {
             background: var(--panel-solid);
             border: 1px solid var(--border);
             border-radius: 20px;
-            padding: 16px 16px 12px 16px;
-            box-shadow: var(--shadow-soft);
-            margin-bottom: 18px;
+            padding: 20px;
+            box-shadow: var(--shadow);
             width: 100%;
+            margin-bottom: 12px;
         }
         .answer-label {
             font-size: 11px;
             font-weight: 700;
             letter-spacing: 0.08em;
             color: var(--muted);
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             text-transform: uppercase;
         }
         .answer-main {
-            font-size: 15px;
-            line-height: 1.68;
-            margin-bottom: 14px;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 16px;
             color: var(--text);
             white-space: pre-wrap;
         }
 
-        /* Citations */
+        /* Bot Citations & Chips */
         .citation-badge {
             display: inline-flex;
             align-items: center;
@@ -189,184 +181,136 @@ def _inject_styles() -> None:
             color: #4e5a72;
             font-size: 13px;
             margin-right: 6px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            font-weight: 500;
         }
         .source-line {
             color: var(--muted);
-            font-size: 12px;
+            font-size: 13px;
             line-height: 1.4;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
-        .source-container {
-            margin-bottom: 14px;
-        }
-
-        /* Chips */
         .chips {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
+            margin-top: 6px;
         }
         .chip {
             border-radius: 999px;
             background: var(--chip);
             border: 1px solid #d7dfeb;
             color: #53617d;
-            padding: 5px 10px;
+            padding: 6px 12px;
             font-size: 12px;
-            line-height: 1;
+            font-weight: 500;
         }
 
-        /* Expander override (details.why) */
+        /* Expander override */
         [data-testid="stExpander"] {
             border: 1px solid var(--border) !important;
             border-radius: 14px !important;
             background: #fafbfd !important;
-            overflow: hidden;
             box-shadow: none !important;
         }
         [data-testid="stExpander"] summary {
-            padding: 14px 16px !important;
-            font-weight: 600 !important;
+            padding: 12px 16px !important;
         }
         [data-testid="stExpander"] summary p {
             font-weight: 600 !important;
             color: var(--text) !important;
             font-size: 14px !important;
         }
-        [data-testid="stExpanderDetails"] {
-            border-top: 1px solid var(--border) !important;
-            padding: 14px 16px !important;
-            color: #4d5870 !important;
-            font-size: 14px !important;
-            line-height: 1.55 !important;
-        }
 
-        /* --- Composer --- */
-        #qa-composer-anchor + div {
+        /* ----------------------------------- */
+        /* FULL-WIDTH FLOATING COMPOSER        */
+        /* ----------------------------------- */
+        div[data-testid="stVerticalBlock"]:has(> div.element-container #qa-composer-anchor) {
             position: fixed;
-            inset: auto 0 0 0;
-            min-height: var(--composer-height);
-            background: linear-gradient(to top, rgba(245,247,252,0.99), rgba(245,247,252,0.94));
-            backdrop-filter: blur(14px);
+            bottom: 0;
+            left: 0;
+            width: 100vw !important;
+            background: linear-gradient(to top, rgba(246,247,251,1) 75%, rgba(246,247,251,0.9));
+            backdrop-filter: blur(10px);
             border-top: 1px solid rgba(223,227,234,0.85);
-            box-shadow: 0 -12px 28px rgba(18, 31, 53, 0.08);
-            z-index: 999;
-            padding: 12px 0 16px 0;
-        }
-        #qa-composer-anchor + div > div {
-            width: min(calc(100vw - 24px), var(--content-width));
-            margin: 0 auto;
-        }
-        .composer-inner {
+            z-index: 99999;
+            box-shadow: var(--shadow-footer);
             display: flex;
-            flex-direction: column;
-            gap: 8px;
+            justify-content: center;
+            padding: 16px 0 24px 0;
         }
-        .composer-dock {
+        div[data-testid="stVerticalBlock"]:has(> div.element-container #qa-composer-anchor) > div {
+            max-width: var(--content-width) !important;
             width: 100%;
+            margin: 0 auto;
+            padding: 0 1rem;
         }
 
-        /* Text Area input-wrap */
-        .composer-inner div[data-testid="stTextArea"] {
-            margin-bottom: 0;
-        }
-        .composer-inner div[data-testid="stTextArea"] > div {
+        /* Text Area / Input styling */
+        div[data-testid="stTextArea"] > div {
             background: var(--panel-solid) !important;
             border: 1px solid var(--border) !important;
-            border-radius: 18px !important;
-            box-shadow: var(--shadow-soft) !important;
-            padding: 12px 14px !important;
+            border-radius: var(--radius) !important;
+            box-shadow: 0 4px 12px rgba(18, 31, 53, 0.04) !important;
+            padding: 10px 14px !important;
         }
-        .composer-inner div[data-testid="stTextArea"] textarea {
+        div[data-testid="stTextArea"] textarea {
             border: 0 !important;
             outline: none !important;
             box-shadow: none !important;
             background: transparent !important;
             color: var(--text) !important;
-            min-height: 48px !important;
-            max-height: 110px !important;
+            min-height: 52px !important;
+            max-height: 120px !important;
             padding: 0 !important;
-            font-size: 14px !important;
-            line-height: 1.45 !important;
-            resize: none !important;
+            font-size: 15px !important;
+            line-height: 1.5 !important;
         }
 
-        /* Suggestions & Composer Bottom */
-        .composer-bottom {
-            width: 100%;
-            margin-top: 4px;
-        }
-        .composer-bottom > div[data-testid="stHorizontalBlock"] {
-            align-items: flex-end;
-        }
-
-        /* Suggestion Chips */
-        .suggestions-wrap {
+        /* Composer Action Area */
+        .composer-bottom-layout {
+            margin-top: 8px;
             display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
+            align-items: center;
         }
+        
+        /* Suggestion Buttons */
         .suggestion-col div[data-testid="stButton"] > button {
             border: 1px solid var(--border) !important;
-            background: #fff !important;
+            background: #ffffff !important;
             border-radius: 999px !important;
-            padding: 7px 12px !important;
-            font-size: 12px !important;
+            padding: 8px 14px !important;
+            font-size: 13px !important;
             color: #44506a !important;
             white-space: nowrap !important;
-            box-shadow: 0 2px 10px rgba(18, 31, 53, 0.04) !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
             min-height: auto !important;
-            line-height: 1 !important;
+            line-height: 1.2 !important;
+        }
+        .suggestion-col div[data-testid="stButton"] > button:hover {
+            border-color: var(--accent) !important;
+            color: var(--accent) !important;
         }
 
         /* Send Button */
-        .send-btn-wrap {
-            display: flex;
-            justify-content: flex-end;
-        }
         .send-btn-wrap div[data-testid="stButton"] > button {
-            width: 40px !important;
-            min-width: 40px !important;
-            height: 40px !important;
+            width: 48px !important;
+            min-width: 48px !important;
+            height: 48px !important;
             border-radius: 999px !important;
             border: 0 !important;
             background: var(--accent) !important;
             color: #fff !important;
-            font-size: 18px !important;
+            font-size: 24px !important;
             cursor: pointer !important;
             padding: 0 !important;
-            line-height: 1 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            box-shadow: 0 10px 20px rgba(22, 131, 127, 0.26) !important;
+            box-shadow: 0 4px 12px rgba(15, 139, 141, 0.25) !important;
+            float: right;
+            transition: transform 0.1s ease;
         }
-
-        @media (max-width: 768px) {
-            :root {
-                --header-height: 116px;
-                --composer-height: 172px;
-            }
-            .block-container {
-                padding-top: calc(var(--header-height) + 1.5rem) !important;
-                padding-bottom: calc(var(--composer-height) + 1.5rem) !important;
-            }
-            .header-inner > div[data-testid="stHorizontalBlock"] {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-            }
-            .header-clear-wrap {
-                width: 100%;
-            }
-            .message-bubble {
-                max-width: 88%;
-            }
-            .composer-bottom > div[data-testid="stHorizontalBlock"] {
-                align-items: stretch;
-            }
+        .send-btn-wrap div[data-testid="stButton"] > button:active {
+            transform: scale(0.95);
         }
         </style>
         """,
@@ -536,11 +480,11 @@ def _render_answer_details(response) -> None:
 
 
 def _render_assistant_message(response) -> None:
-    st.markdown("<section class='answer-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='answer-card'>", unsafe_allow_html=True)
     _render_answer_card(response)
     _render_badges(response)
     _render_answer_details(response)
-    st.markdown("</section>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _extract_topic_prompts(question: str) -> list[str]:
@@ -613,9 +557,8 @@ def _build_dynamic_prompt_chips(conversation_history: list[dict[str, object]], c
 
 
 def _render_header(status_line: str) -> None:
-    st.markdown("<div id='qa-header-anchor'></div>", unsafe_allow_html=True)
     with st.container():
-        st.markdown("<div class='header-inner header-dock'>", unsafe_allow_html=True)
+        st.markdown("<span id='qa-header-anchor'></span>", unsafe_allow_html=True)
         header_cols = st.columns([8, 2], gap="large")
         with header_cols[0]:
             st.markdown(
@@ -637,54 +580,50 @@ def _render_header(status_line: str) -> None:
                 on_click=_clear_conversation,
             )
             st.markdown("</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_conversation(conversation_history: list[dict[str, object]]) -> None:
-    st.markdown("<div class='conversation-shell'><div class='chat-inner'>", unsafe_allow_html=True)
+    st.markdown("<div class='chat-inner'>", unsafe_allow_html=True)
     for turn in conversation_history:
         _render_user_message(str(turn["question"]))
         _render_assistant_message(turn["response"])
-    st.markdown("</div></div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_composer(prompt_chips: list[str], answer_service: AnswerService) -> None:
-    st.markdown("<div id='qa-composer-anchor'></div>", unsafe_allow_html=True)
     with st.container():
-        st.markdown("<div class='composer-inner composer-dock'>", unsafe_allow_html=True)
-
+        st.markdown("<span id='qa-composer-anchor'></span>", unsafe_allow_html=True)
+        
         st.text_area(
             "Message QuestAI",
             key=QUESTION_INPUT_KEY,
-            height=56,
+            height=60,
             placeholder="Ask about policy guidance, customer data, or a cautious combined question.",
             label_visibility="collapsed",
         )
 
-        st.markdown("<div class='composer-bottom'>", unsafe_allow_html=True)
-        composer_cols = st.columns([10, 2], gap="small")
+        composer_cols = st.columns([10, 2], gap="small", vertical_alignment="center")
         with composer_cols[0]:
             if prompt_chips:
-                st.markdown("<div class='suggestions-wrap'>", unsafe_allow_html=True)
-                chip_widths = [max(1.4, min(len(prompt) / 16, 2.6)) for prompt in prompt_chips]
-                chip_cols = st.columns(chip_widths + [0.6], gap="small")
-                for index, prompt in enumerate(prompt_chips):
-                    with chip_cols[index]:
-                        st.markdown("<div class='suggestion-col'>", unsafe_allow_html=True)
-                        st.button(
-                            prompt,
-                            key=f"prompt-chip-{index}",
-                            use_container_width=True,
-                            on_click=_set_question,
-                            args=(prompt,),
-                        )
-                        st.markdown("</div>", unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
+                chip_col_count = len(prompt_chips)
+                if chip_col_count > 0:
+                    chip_cols = st.columns(chip_col_count, gap="small")
+                    for index, prompt in enumerate(prompt_chips):
+                        with chip_cols[index]:
+                            st.markdown("<div class='suggestion-col'>", unsafe_allow_html=True)
+                            st.button(
+                                prompt,
+                                key=f"prompt-chip-{index}",
+                                use_container_width=True,
+                                on_click=_set_question,
+                                args=(prompt,),
+                            )
+                            st.markdown("</div>", unsafe_allow_html=True)
 
         with composer_cols[1]:
             st.markdown("<div class='send-btn-wrap'>", unsafe_allow_html=True)
             st.button(
-                ">",
+                "›",
                 key="send-question",
                 type="primary",
                 use_container_width=True,
@@ -693,8 +632,6 @@ def _render_composer(prompt_chips: list[str], answer_service: AnswerService) -> 
             )
             st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
 
 def run_app() -> None:
     config = build_app_config()
@@ -761,6 +698,7 @@ def run_app() -> None:
         f"Chunks: {len(chunks)} | "
         f"CSV: {dataset_info.file_name if dataset_info.dataset_found and dataset_info.file_name else 'Not loaded'}"
     )
+    
     _render_header(status_line)
 
     if synthesis_status_code != "success":
