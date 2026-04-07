@@ -35,7 +35,10 @@ def run_app() -> None:
         retrieval_keywords=config.retrieval_keywords,
         structured_keywords=config.structured_keywords,
     )
-    document_store = DocumentStore(docs_path=config.docs_path)
+    document_store = DocumentStore(
+        docs_path=config.docs_path,
+        pdf_min_text_characters=config.pdf_min_text_characters,
+    )
     chunker = MarkdownChunker(max_characters=config.markdown_chunk_max_characters)
     retriever = KeywordRetriever(top_k=config.retrieval_top_k)
     llm_client = OpenAIAppClient(
@@ -60,9 +63,13 @@ def run_app() -> None:
         retrieval_context_max_characters=config.retrieval_context_max_characters,
     )
     documents = document_store.list_documents()
-    markdown_documents = document_store.load_markdown_documents()
-    chunks = chunker.chunk_documents(markdown_documents)
+    retrieval_documents = document_store.load_retrieval_documents()
+    document_load_issues = document_store.get_document_load_issues()
+    chunks = chunker.chunk_documents(retrieval_documents)
     dataset_info = customer_data_loader.get_data_info()
+    markdown_count = sum(1 for document in retrieval_documents if document.source_type == "markdown")
+    pdf_count = sum(1 for document in retrieval_documents if document.source_type == "pdf")
+    skipped_pdf_issues = [issue for issue in document_load_issues if issue.source_type == "pdf"]
 
     st.set_page_config(page_title=config.app_title, layout="centered")
     if QUESTION_INPUT_KEY not in st.session_state:
@@ -78,12 +85,18 @@ def run_app() -> None:
         st.caption(
             f"Retrieval synthesis: {retrieval_status} | "
             f"Model: {config.openai_model} | "
-            f"Markdown docs: {len(markdown_documents)} | "
+            f"Markdown docs: {markdown_count} | "
+            f"PDF docs: {pdf_count} | "
             f"Chunks: {len(chunks)} | "
             f"CSV: {dataset_info.file_name if dataset_info.dataset_found and dataset_info.file_name else 'Not loaded'}"
         )
         if synthesis_status_code != "success":
             st.caption(synthesis_status_message)
+        if skipped_pdf_issues:
+            st.caption(
+                "Skipped PDF files: "
+                + "; ".join(f"{issue.file_name} ({issue.reason})" for issue in skipped_pdf_issues)
+            )
 
     with st.container():
         st.subheader("Ask A Question")

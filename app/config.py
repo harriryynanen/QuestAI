@@ -16,6 +16,7 @@ class AppConfig:
     docs_path: Path
     structured_data_path: Path
     markdown_chunk_max_characters: int = 400
+    pdf_min_text_characters: int = 40
     retrieval_top_k: int = 3
     retrieval_context_max_characters: int = 2400
     llm_enabled_for_retrieval: bool = True

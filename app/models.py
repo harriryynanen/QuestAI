@@ -50,6 +50,7 @@ class DocumentInfo:
     path: Path
     extension: str
     size_bytes: int
+    source_type: str | None = None
 
 
 @dataclass(frozen=True)
@@ -66,6 +67,15 @@ class DocumentRecord:
     file_name: str
     path: Path
     text: str
+    source_type: str = "markdown"
+
+
+@dataclass(frozen=True)
+class DocumentLoadIssue:
+    file_name: str
+    path: Path
+    reason: str
+    source_type: str
 
 
 @dataclass(frozen=True)

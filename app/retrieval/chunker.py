@@ -13,7 +13,7 @@ class MarkdownChunker:
 
     def _chunk_document(self, document: DocumentRecord) -> list[DocumentChunk]:
         chunks: list[DocumentChunk] = []
-        current_heading: str | None = None
+        current_heading: str | None = "Extracted text" if document.source_type == "pdf" else None
         buffer: list[str] = []
         chunk_index = 1
 

@@ -1,4 +1,6 @@
-from models import RetrievalSynthesisResult
+from pathlib import Path
+
+from models import DocumentRecord, RetrievalSynthesisResult
 
 
 def test_retrieval_flow_returns_grounded_sources(
@@ -74,3 +76,47 @@ def test_retrieval_flow_falls_back_safely_when_llm_is_unavailable(
     assert response.synthesis_status == "missing_api_key"
     assert response.synthesis_status_message == "LLM synthesis unavailable: missing API key."
     assert response.sources_used
+
+
+def test_retrieval_flow_can_cite_pdf_sources(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="retrieval",
+            operation="policy_lookup",
+            document_topic="tax arrears",
+            needs_documents=True,
+            confidence="high",
+            reason="The question asks for document guidance.",
+        )
+    )
+    retrieval_result = RetrievalSynthesisResult(
+        answer="The PDF guidance highlights unresolved tax arrears as an escalation condition.",
+        support_level="high",
+        limitations="This answer is grounded only in retrieved document passages.",
+        synthesis_method="llm",
+        status="success",
+        failure_reason=None,
+    )
+    service = answer_service_factory(
+        planning_result=planning_result,
+        retrieval_result=retrieval_result,
+    )
+    service.document_store.load_retrieval_documents = lambda: [
+        DocumentRecord(
+            document_id="policy_pdf",
+            file_name="policy.pdf",
+            path=Path("policy.pdf"),
+            text="## Page 1\nUnresolved tax arrears should be escalated.",
+            source_type="pdf",
+        )
+    ]
+
+    response = service.answer_question("What does the policy say about tax arrears?")
+
+    assert response.route == "retrieval"
+    assert response.sources_used
+    assert any("policy.pdf" in source for source in response.sources_used)

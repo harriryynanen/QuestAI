@@ -47,8 +47,8 @@ class AnswerService:
         dataset_info = self.customer_data_loader.get_data_info()
         dataframe = self.customer_data_loader.get_dataframe()
         dataset_file_name = self.customer_data_loader.get_dataset_file_name()
-        markdown_documents = self.document_store.load_markdown_documents()
-        chunks = self.chunker.chunk_documents(markdown_documents)
+        retrieval_documents = self.document_store.load_retrieval_documents()
+        chunks = self.chunker.chunk_documents(retrieval_documents)
         semantic_plan = planning_result.plan if planning_result.status == "success" else None
 
         if route == "unknown":
