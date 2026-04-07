@@ -1,4 +1,4 @@
-from ui.streamlit_app import run_app
+from app.ui.streamlit_app_vali import run_app
 
 
 if __name__ == "__main__":
