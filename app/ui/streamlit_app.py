@@ -24,20 +24,39 @@ def _inject_styles() -> None:
         <style>
         .block-container {
             max-width: 900px;
-            padding-top: 0.9rem;
-            padding-bottom: 1.1rem;
+            padding-top: 9.5rem;
+            padding-bottom: 15rem;
         }
-        .qa-app-shell {
-            height: calc(100vh - 2.5rem);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+        .qa-top-spacer {
+            height: 0.35rem;
+        }
+        .qa-bottom-spacer {
+            height: 0.85rem;
+        }
+        div[data-testid="stVerticalBlock"] > div:has(.qa-header-anchor) {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(900px, calc(100vw - 2rem));
+            z-index: 1000;
+            background: rgba(249, 250, 251, 0.98);
+            padding-top: 0.75rem;
+        }
+        div[data-testid="stVerticalBlock"] > div:has(.qa-composer-anchor) {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(900px, calc(100vw - 2rem));
+            z-index: 1000;
+            background: linear-gradient(to top, rgba(249, 250, 251, 0.99), rgba(249, 250, 251, 0.96));
+            padding-bottom: 0.8rem;
         }
         .qa-header-dock {
-            flex-shrink: 0;
             padding: 0 0 0.8rem 0;
             border-bottom: 1px solid rgba(17, 24, 39, 0.08);
-            background: rgba(249, 250, 251, 0.97);
+            background: transparent;
         }
         .qa-header-row {
             display: flex;
@@ -62,17 +81,7 @@ def _inject_styles() -> None:
             margin-top: 0.35rem;
         }
         .qa-conversation-shell {
-            flex: 1;
-            min-height: 0;
-            padding: 0.4rem 0.15rem 0.9rem 0.15rem;
-        }
-        .qa-empty-state {
-            border: 1px dashed #d8e0ea;
-            background: #f8fafc;
-            border-radius: 18px;
-            padding: 1rem 1.1rem;
-            color: #526072;
-            margin-bottom: 1rem;
+            padding: 0.1rem 0.15rem 0.9rem 0.15rem;
         }
         .qa-user-wrap {
             display: flex;
@@ -189,7 +198,6 @@ def _inject_styles() -> None:
             font-size: 0.78rem;
         }
         .qa-composer-dock {
-            flex-shrink: 0;
             background: linear-gradient(to top, rgba(249, 250, 251, 0.98), rgba(249, 250, 251, 0.94));
             border-top: 1px solid rgba(17, 24, 39, 0.08);
             padding-top: 0.7rem;
@@ -221,6 +229,16 @@ def _inject_styles() -> None:
         }
         div[data-testid="stButton"] > button {
             border-radius: 999px;
+        }
+        @media (max-width: 900px) {
+            .block-container {
+                padding-top: 10.25rem;
+                padding-bottom: 16rem;
+            }
+            div[data-testid="stVerticalBlock"] > div:has(.qa-header-anchor),
+            div[data-testid="stVerticalBlock"] > div:has(.qa-composer-anchor) {
+                width: calc(100vw - 1rem);
+            }
         }
         </style>
         """,
@@ -496,6 +514,7 @@ def _build_dynamic_prompt_chips(conversation_history: list[dict[str, object]], c
 
 
 def _render_header(status_line: str) -> None:
+    st.markdown("<div class='qa-header-anchor'></div>", unsafe_allow_html=True)
     header_cols = st.columns([12, 2], gap="small")
     with header_cols[0]:
         st.markdown(
@@ -525,25 +544,15 @@ def _render_header(status_line: str) -> None:
 
 def _render_conversation(conversation_history: list[dict[str, object]]) -> None:
     st.markdown("<div class='qa-conversation-shell'>", unsafe_allow_html=True)
-    if not conversation_history:
-        st.markdown(
-            (
-                "<div class='qa-empty-state'>"
-                "Ask about policy guidance, customer data, or a cautious combined assessment."
-                "</div>"
-            ),
-            unsafe_allow_html=True,
-        )
-    else:
-        conversation_box = st.container(height=540, border=False)
-        with conversation_box:
-            for turn in conversation_history:
-                _render_user_message(str(turn["question"]))
-                _render_assistant_message(turn["response"])
+    if conversation_history:
+        for turn in conversation_history:
+            _render_user_message(str(turn["question"]))
+            _render_assistant_message(turn["response"])
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_composer(prompt_chips: list[str], answer_service: AnswerService) -> None:
+    st.markdown("<div class='qa-composer-anchor'></div>", unsafe_allow_html=True)
     st.markdown("<div class='qa-composer-dock'><div class='qa-composer-card'>", unsafe_allow_html=True)
     st.text_area(
         "Message QuestAI",
@@ -640,7 +649,6 @@ def run_app() -> None:
     synthesis_status_code, synthesis_status_message = llm_client.get_status()
     retrieval_status = "OpenAI available" if llm_client.is_available() else "Fallback mode"
 
-    st.markdown("<div class='qa-app-shell'>", unsafe_allow_html=True)
     status_line = (
         f"Retrieval synthesis: {retrieval_status} | "
         f"Model: {config.openai_model} | "
@@ -651,6 +659,7 @@ def run_app() -> None:
         f"CSV: {dataset_info.file_name if dataset_info.dataset_found and dataset_info.file_name else 'Not loaded'}"
     )
     _render_header(status_line)
+    st.markdown("<div class='qa-top-spacer'></div>", unsafe_allow_html=True)
 
     if synthesis_status_code != "success":
         st.markdown("<div class='qa-status-note'>", unsafe_allow_html=True)
@@ -665,6 +674,6 @@ def run_app() -> None:
         st.markdown("</div>", unsafe_allow_html=True)
 
     _render_conversation(conversation_history)
+    st.markdown("<div class='qa-bottom-spacer'></div>", unsafe_allow_html=True)
     prompt_chips = _build_dynamic_prompt_chips(conversation_history, config)
     _render_composer(prompt_chips, answer_service)
-    st.markdown("</div>", unsafe_allow_html=True)
