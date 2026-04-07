@@ -397,7 +397,7 @@ def _inject_styles() -> None:
             }
 
             .block-container {
-                padding-top: calc(var(--qa-header-height) + 1.2rem);
+                padding-top: calc(var(--qa-header-height) - 5rem);
                 padding-bottom: calc(var(--qa-composer-height) + 1.2rem);
             }
 
