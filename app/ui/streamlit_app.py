@@ -23,19 +23,20 @@ def _inject_styles() -> None:
         """
         <style>
         :root {
-            --bg: #f6f7fb;
-            --panel: rgba(255,255,255,0.9);
+            --bg: #f5f7fc;
+            --panel: rgba(255,255,255,0.92);
             --panel-solid: #ffffff;
-            --border: #dfe3ea;
-            --text: #162033;
-            --muted: #6d7890;
-            --accent: #0f8b8d;
-            --chip: #eef2f8;
-            --header-height: 104px;
-            --composer-height: 132px;
+            --border: #dfe6f1;
+            --text: #1a2333;
+            --muted: #73819a;
+            --accent: #16837f;
+            --chip: #eef3fb;
+            --header-height: 98px;
+            --composer-height: 156px;
             --content-width: 760px;
             --radius: 18px;
-            --shadow: 0 8px 30px rgba(18, 31, 53, 0.08);
+            --shadow: 0 10px 28px rgba(18, 31, 53, 0.08);
+            --shadow-soft: 0 18px 40px rgba(18, 31, 53, 0.10);
         }
 
         html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"], .stApp {
@@ -46,8 +47,8 @@ def _inject_styles() -> None:
 
         .block-container {
             max-width: var(--content-width) !important;
-            padding-top: calc(var(--header-height) + 2rem) !important;
-            padding-bottom: calc(var(--composer-height) + 2.5rem) !important;
+            padding-top: calc(var(--header-height) + 2.2rem) !important;
+            padding-bottom: calc(var(--composer-height) + 2.8rem) !important;
         }
 
         /* --- Header Anchor --- */
@@ -55,11 +56,12 @@ def _inject_styles() -> None:
             position: fixed;
             inset: 0 0 auto 0;
             height: var(--header-height);
-            background: rgba(246,247,251,0.9);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(223,227,234,0.8);
+            background: linear-gradient(to bottom, rgba(245,247,252,0.98), rgba(245,247,252,0.92));
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(223,227,234,0.72);
+            box-shadow: 0 8px 24px rgba(18, 31, 53, 0.05);
             z-index: 999;
-            padding-top: 1rem;
+            padding-top: 0.8rem;
         }
         #qa-header-anchor + div > div {
             width: min(calc(100vw - 24px), var(--content-width));
@@ -71,6 +73,10 @@ def _inject_styles() -> None:
         .header-inner {
             width: 100%;
         }
+        .header-dock {
+            width: 100%;
+            padding-bottom: 0.5rem;
+        }
         .header-inner > div[data-testid="stHorizontalBlock"] {
             align-items: center;
         }
@@ -78,7 +84,7 @@ def _inject_styles() -> None:
             min-width: 0;
         }
         .brand {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
             margin: 0 0 4px 0;
             letter-spacing: -0.02em;
@@ -86,7 +92,7 @@ def _inject_styles() -> None:
             line-height: 1.2;
         }
         .meta {
-            font-size: 13px;
+            font-size: 12px;
             color: var(--muted);
             line-height: 1.35;
         }
@@ -101,41 +107,46 @@ def _inject_styles() -> None:
             background: var(--panel-solid) !important;
             color: var(--text) !important;
             border-radius: 12px !important;
-            padding: 11px 18px !important;
-            font-size: 14px !important;
+            padding: 10px 16px !important;
+            font-size: 13px !important;
             cursor: pointer;
-            box-shadow: 0 2px 8px rgba(18,31,53,0.04) !important;
+            box-shadow: var(--shadow) !important;
             min-height: auto !important;
             height: auto !important;
         }
 
         /* --- Chat Region --- */
+        .conversation-shell {
+            width: 100%;
+            padding-top: 0.6rem;
+        }
         .chat-inner {
             display: flex;
             flex-direction: column;
-            gap: 18px;
+            gap: 20px;
             width: 100%;
         }
         .message-row {
             display: flex;
             width: 100%;
-            margin-bottom: 18px;
+            margin-bottom: 10px;
         }
         .message-row.user {
             justify-content: flex-end;
         }
         .message-bubble {
-            max-width: 78%;
-            border-radius: 18px;
-            padding: 14px 16px;
-            font-size: 15px;
-            line-height: 1.45;
-            box-shadow: 0 3px 12px rgba(18,31,53,0.05);
+            max-width: 66%;
+            border-radius: 16px;
+            padding: 12px 15px;
+            font-size: 14px;
+            line-height: 1.5;
+            box-shadow: var(--shadow);
             white-space: pre-wrap;
         }
         .message-row.user .message-bubble {
-            background: #e9edf4;
+            background: #eef2f8;
             color: var(--text);
+            border: 1px solid #e2e8f1;
             border-top-right-radius: 8px;
         }
 
@@ -144,8 +155,8 @@ def _inject_styles() -> None:
             background: var(--panel-solid);
             border: 1px solid var(--border);
             border-radius: 20px;
-            padding: 16px;
-            box-shadow: var(--shadow);
+            padding: 16px 16px 12px 16px;
+            box-shadow: var(--shadow-soft);
             margin-bottom: 18px;
             width: 100%;
         }
@@ -158,8 +169,8 @@ def _inject_styles() -> None:
             text-transform: uppercase;
         }
         .answer-main {
-            font-size: 16px;
-            line-height: 1.55;
+            font-size: 15px;
+            line-height: 1.68;
             margin-bottom: 14px;
             color: var(--text);
             white-space: pre-wrap;
@@ -182,7 +193,7 @@ def _inject_styles() -> None:
         }
         .source-line {
             color: var(--muted);
-            font-size: 13px;
+            font-size: 12px;
             line-height: 1.4;
             margin-bottom: 4px;
         }
@@ -202,7 +213,7 @@ def _inject_styles() -> None:
             background: var(--chip);
             border: 1px solid #d7dfeb;
             color: #53617d;
-            padding: 6px 10px;
+            padding: 5px 10px;
             font-size: 12px;
             line-height: 1;
         }
@@ -237,11 +248,12 @@ def _inject_styles() -> None:
             position: fixed;
             inset: auto 0 0 0;
             min-height: var(--composer-height);
-            background: linear-gradient(to top, rgba(246,247,251,0.98), rgba(246,247,251,0.9));
-            backdrop-filter: blur(10px);
+            background: linear-gradient(to top, rgba(245,247,252,0.99), rgba(245,247,252,0.94));
+            backdrop-filter: blur(14px);
             border-top: 1px solid rgba(223,227,234,0.85);
+            box-shadow: 0 -12px 28px rgba(18, 31, 53, 0.08);
             z-index: 999;
-            padding: 14px 0 18px 0;
+            padding: 12px 0 16px 0;
         }
         #qa-composer-anchor + div > div {
             width: min(calc(100vw - 24px), var(--content-width));
@@ -250,7 +262,10 @@ def _inject_styles() -> None:
         .composer-inner {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
+        }
+        .composer-dock {
+            width: 100%;
         }
 
         /* Text Area input-wrap */
@@ -261,8 +276,8 @@ def _inject_styles() -> None:
             background: var(--panel-solid) !important;
             border: 1px solid var(--border) !important;
             border-radius: 18px !important;
-            box-shadow: var(--shadow) !important;
-            padding: 12px !important;
+            box-shadow: var(--shadow-soft) !important;
+            padding: 12px 14px !important;
         }
         .composer-inner div[data-testid="stTextArea"] textarea {
             border: 0 !important;
@@ -270,10 +285,10 @@ def _inject_styles() -> None:
             box-shadow: none !important;
             background: transparent !important;
             color: var(--text) !important;
-            min-height: 56px !important;
-            max-height: 132px !important;
+            min-height: 48px !important;
+            max-height: 110px !important;
             padding: 0 !important;
-            font-size: 15px !important;
+            font-size: 14px !important;
             line-height: 1.45 !important;
             resize: none !important;
         }
@@ -281,27 +296,27 @@ def _inject_styles() -> None:
         /* Suggestions & Composer Bottom */
         .composer-bottom {
             width: 100%;
-            margin-top: 6px;
+            margin-top: 4px;
         }
         .composer-bottom > div[data-testid="stHorizontalBlock"] {
-            align-items: center;
+            align-items: flex-end;
         }
 
         /* Suggestion Chips */
         .suggestions-wrap {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 6px;
         }
         .suggestion-col div[data-testid="stButton"] > button {
             border: 1px solid var(--border) !important;
             background: #fff !important;
             border-radius: 999px !important;
-            padding: 9px 12px !important;
-            font-size: 13px !important;
+            padding: 7px 12px !important;
+            font-size: 12px !important;
             color: #44506a !important;
             white-space: nowrap !important;
-            box-shadow: none !important;
+            box-shadow: 0 2px 10px rgba(18, 31, 53, 0.04) !important;
             min-height: auto !important;
             line-height: 1 !important;
         }
@@ -312,26 +327,27 @@ def _inject_styles() -> None:
             justify-content: flex-end;
         }
         .send-btn-wrap div[data-testid="stButton"] > button {
-            width: 46px !important;
-            min-width: 46px !important;
-            height: 46px !important;
+            width: 40px !important;
+            min-width: 40px !important;
+            height: 40px !important;
             border-radius: 999px !important;
             border: 0 !important;
             background: var(--accent) !important;
             color: #fff !important;
-            font-size: 22px !important;
+            font-size: 18px !important;
             cursor: pointer !important;
             padding: 0 !important;
             line-height: 1 !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
+            box-shadow: 0 10px 20px rgba(22, 131, 127, 0.26) !important;
         }
 
         @media (max-width: 768px) {
             :root {
-                --header-height: 118px;
-                --composer-height: 176px;
+                --header-height: 116px;
+                --composer-height: 172px;
             }
             .block-container {
                 padding-top: calc(var(--header-height) + 1.5rem) !important;
@@ -346,10 +362,10 @@ def _inject_styles() -> None:
                 width: 100%;
             }
             .message-bubble {
-                max-width: 92%;
+                max-width: 88%;
             }
             .composer-bottom > div[data-testid="stHorizontalBlock"] {
-                align-items: flex-end;
+                align-items: stretch;
             }
         }
         </style>
@@ -599,7 +615,7 @@ def _build_dynamic_prompt_chips(conversation_history: list[dict[str, object]], c
 def _render_header(status_line: str) -> None:
     st.markdown("<div id='qa-header-anchor'></div>", unsafe_allow_html=True)
     with st.container():
-        st.markdown("<div class='header-inner'>", unsafe_allow_html=True)
+        st.markdown("<div class='header-inner header-dock'>", unsafe_allow_html=True)
         header_cols = st.columns([8, 2], gap="large")
         with header_cols[0]:
             st.markdown(
@@ -625,18 +641,18 @@ def _render_header(status_line: str) -> None:
 
 
 def _render_conversation(conversation_history: list[dict[str, object]]) -> None:
-    st.markdown("<div class='chat-inner'>", unsafe_allow_html=True)
+    st.markdown("<div class='conversation-shell'><div class='chat-inner'>", unsafe_allow_html=True)
     for turn in conversation_history:
         _render_user_message(str(turn["question"]))
         _render_assistant_message(turn["response"])
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def _render_composer(prompt_chips: list[str], answer_service: AnswerService) -> None:
     st.markdown("<div id='qa-composer-anchor'></div>", unsafe_allow_html=True)
     with st.container():
-        st.markdown("<div class='composer-inner'>", unsafe_allow_html=True)
-        
+        st.markdown("<div class='composer-inner composer-dock'>", unsafe_allow_html=True)
+
         st.text_area(
             "Message QuestAI",
             key=QUESTION_INPUT_KEY,
@@ -650,27 +666,25 @@ def _render_composer(prompt_chips: list[str], answer_service: AnswerService) -> 
         with composer_cols[0]:
             if prompt_chips:
                 st.markdown("<div class='suggestions-wrap'>", unsafe_allow_html=True)
-                # Determine how many columns we actually need for the chips
-                chip_col_count = len(prompt_chips)
-                if chip_col_count > 0:
-                    chip_cols = st.columns(chip_col_count, gap="small")
-                    for index, prompt in enumerate(prompt_chips):
-                        with chip_cols[index]:
-                            st.markdown("<div class='suggestion-col'>", unsafe_allow_html=True)
-                            st.button(
-                                prompt,
-                                key=f"prompt-chip-{index}",
-                                use_container_width=True,
-                                on_click=_set_question,
-                                args=(prompt,),
-                            )
-                            st.markdown("</div>", unsafe_allow_html=True)
+                chip_widths = [max(1.4, min(len(prompt) / 16, 2.6)) for prompt in prompt_chips]
+                chip_cols = st.columns(chip_widths + [0.6], gap="small")
+                for index, prompt in enumerate(prompt_chips):
+                    with chip_cols[index]:
+                        st.markdown("<div class='suggestion-col'>", unsafe_allow_html=True)
+                        st.button(
+                            prompt,
+                            key=f"prompt-chip-{index}",
+                            use_container_width=True,
+                            on_click=_set_question,
+                            args=(prompt,),
+                        )
+                        st.markdown("</div>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
         with composer_cols[1]:
             st.markdown("<div class='send-btn-wrap'>", unsafe_allow_html=True)
             st.button(
-                "›",
+                ">",
                 key="send-question",
                 type="primary",
                 use_container_width=True,
@@ -678,10 +692,9 @@ def _render_composer(prompt_chips: list[str], answer_service: AnswerService) -> 
                 args=(answer_service,),
             )
             st.markdown("</div>", unsafe_allow_html=True)
-            
-        st.markdown("</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
 
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 def run_app() -> None:
     config = build_app_config()
