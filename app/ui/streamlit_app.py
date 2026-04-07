@@ -46,7 +46,7 @@ def _inject_styles() -> None:
 
         .block-container {
             max-width: var(--qa-content-width);
-            padding-top: calc(var(--qa-header-height) + 0.35rem);
+            padding-top: calc(var(--qa-header-height) - 5rem);
             padding-bottom: calc(var(--qa-composer-height) + 1.8rem);
         }
 
@@ -359,7 +359,7 @@ def _inject_styles() -> None:
             height: 42px !important;
             padding: 0 !important;
             border-radius: 999px !important;
-            font-size: 1.15rem !important;
+            font-size: 12pxrem !important;
             background: var(--qa-accent) !important;
             border: 0 !important;
             box-shadow: none !important;
