@@ -1,12 +1,12 @@
 import json
 
-from llm.openai_client import OpenAIRetrievalSynthesizer
+from llm.openai_client import OpenAIAppClient
 from models import RoutingDecision
 from services.router import RuleBasedRouter, is_confident_routing_decision
 
 
 def test_semantic_planning_parses_valid_json(monkeypatch):
-    synthesizer = OpenAIRetrievalSynthesizer(
+    llm_client = OpenAIAppClient(
         model="gpt-5.4-mini",
         enabled=True,
         api_key="test-key",
@@ -35,9 +35,9 @@ def test_semantic_planning_parses_valid_json(monkeypatch):
     class FakeClient:
         responses = FakeResponses()
 
-    monkeypatch.setattr(synthesizer, "_get_client", lambda: FakeClient())
+    monkeypatch.setattr(llm_client, "_get_client", lambda: FakeClient())
 
-    result = synthesizer.plan_question("What is Harbor Foods Demo Oy's equity ratio?")
+    result = llm_client.plan_question("What is Harbor Foods Demo Oy's equity ratio?")
 
     assert result.status == "success"
     assert result.plan.route == "structured"

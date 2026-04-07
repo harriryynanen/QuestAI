@@ -1,9 +1,9 @@
-from llm.openai_client import OpenAIRetrievalSynthesizer
+from llm.openai_client import OpenAIAppClient
 from models import SemanticPlanningResult, SemanticQueryPlan
 
 
 class StructuredQueryPlanner:
-    def __init__(self, llm_client: OpenAIRetrievalSynthesizer) -> None:
+    def __init__(self, llm_client: OpenAIAppClient) -> None:
         self.llm_client = llm_client
 
     def plan(self, question: str) -> SemanticPlanningResult:

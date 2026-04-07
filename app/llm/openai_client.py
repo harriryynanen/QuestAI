@@ -16,7 +16,7 @@ from models import (
 )
 
 
-class OpenAIRetrievalSynthesizer:
+class OpenAIAppClient:
     def __init__(
         self,
         model: str,

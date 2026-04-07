@@ -1,4 +1,4 @@
-from llm.openai_client import OpenAIRetrievalSynthesizer
+from llm.openai_client import OpenAIAppClient
 from models import (
     AnswerResponse,
     CombinedEvidence,
@@ -26,7 +26,7 @@ class AnswerService:
         chunker: MarkdownChunker,
         retriever: KeywordRetriever,
         structured_query_engine: StructuredQueryEngine,
-        retrieval_synthesizer: OpenAIRetrievalSynthesizer,
+        llm_client: OpenAIAppClient,
         structured_query_planner: StructuredQueryPlanner,
         retrieval_context_max_characters: int,
     ) -> None:
@@ -36,7 +36,7 @@ class AnswerService:
         self.chunker = chunker
         self.retriever = retriever
         self.structured_query_engine = structured_query_engine
-        self.retrieval_synthesizer = retrieval_synthesizer
+        self.llm_client = llm_client
         self.structured_query_planner = structured_query_planner
         self.retrieval_context_max_characters = retrieval_context_max_characters
 
@@ -140,7 +140,7 @@ class AnswerService:
             )
 
         selected_chunks = self._select_retrieval_chunks(retrieved_chunks)
-        llm_result = self.retrieval_synthesizer.synthesize_retrieval_answer(
+        llm_result = self.llm_client.synthesize_retrieval_answer(
             question=question,
             retrieved_chunks=selected_chunks,
         )
@@ -422,7 +422,7 @@ class AnswerService:
                 planning_reason=self._build_planning_reason(planning_result),
             )
 
-        llm_result = self.retrieval_synthesizer.synthesize_combined_answer(
+        llm_result = self.llm_client.synthesize_combined_answer(
             question=question,
             evidence=structured_evidence,
             document_evidence=document_evidence,

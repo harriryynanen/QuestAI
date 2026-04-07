@@ -29,7 +29,7 @@ class StaticPlanner:
         return self.planning_result
 
 
-class StubSynthesizer:
+class StubOpenAIClient:
     def __init__(
         self,
         retrieval_result: RetrievalSynthesisResult | None = None,
@@ -170,7 +170,7 @@ def answer_service_factory(app_config):
         chunker = MarkdownChunker(max_characters=app_config.markdown_chunk_max_characters)
         retriever = KeywordRetriever(top_k=app_config.retrieval_top_k)
         structured_query_engine = StructuredQueryEngine()
-        retrieval_synthesizer = StubSynthesizer(
+        llm_client = StubOpenAIClient(
             retrieval_result=retrieval_result,
             combined_result=combined_result,
         )
@@ -182,7 +182,7 @@ def answer_service_factory(app_config):
             chunker=chunker,
             retriever=retriever,
             structured_query_engine=structured_query_engine,
-            retrieval_synthesizer=retrieval_synthesizer,
+            llm_client=llm_client,
             structured_query_planner=StaticPlanner(planning_result),
             retrieval_context_max_characters=app_config.retrieval_context_max_characters,
         )

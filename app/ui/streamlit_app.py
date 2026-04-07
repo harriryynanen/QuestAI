@@ -1,7 +1,7 @@
 import streamlit as st
 
 from config import build_app_config
-from llm.openai_client import OpenAIRetrievalSynthesizer
+from llm.openai_client import OpenAIAppClient
 from retrieval.chunker import MarkdownChunker
 from retrieval.document_store import DocumentStore
 from retrieval.retriever import KeywordRetriever
@@ -38,7 +38,7 @@ def run_app() -> None:
     document_store = DocumentStore(docs_path=config.docs_path)
     chunker = MarkdownChunker(max_characters=config.markdown_chunk_max_characters)
     retriever = KeywordRetriever(top_k=config.retrieval_top_k)
-    retrieval_synthesizer = OpenAIRetrievalSynthesizer(
+    llm_client = OpenAIAppClient(
         model=config.openai_model,
         enabled=config.llm_enabled_for_retrieval,
         api_key=config.openai_api_key,
@@ -47,7 +47,7 @@ def run_app() -> None:
         structured_data_path=config.structured_data_path
     )
     structured_query_engine = StructuredQueryEngine()
-    structured_query_planner = StructuredQueryPlanner(retrieval_synthesizer)
+    structured_query_planner = StructuredQueryPlanner(llm_client)
     answer_service = AnswerService(
         router=router,
         document_store=document_store,
@@ -55,7 +55,7 @@ def run_app() -> None:
         chunker=chunker,
         retriever=retriever,
         structured_query_engine=structured_query_engine,
-        retrieval_synthesizer=retrieval_synthesizer,
+        llm_client=llm_client,
         structured_query_planner=structured_query_planner,
         retrieval_context_max_characters=config.retrieval_context_max_characters,
     )
@@ -71,8 +71,8 @@ def run_app() -> None:
     st.title(config.app_title)
     st.write(config.app_description)
 
-    synthesis_status_code, synthesis_status_message = retrieval_synthesizer.get_status()
-    retrieval_status = "OpenAI available" if retrieval_synthesizer.is_available() else "Fallback mode"
+    synthesis_status_code, synthesis_status_message = llm_client.get_status()
+    retrieval_status = "OpenAI available" if llm_client.is_available() else "Fallback mode"
     with st.container():
         st.subheader("Status")
         st.caption(
