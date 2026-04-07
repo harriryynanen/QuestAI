@@ -24,18 +24,20 @@ def _inject_styles() -> None:
         <style>
         .block-container {
             max-width: 900px;
-            padding-top: 0.8rem;
-            padding-bottom: 6.75rem;
+            padding-top: 0.9rem;
+            padding-bottom: 1.1rem;
         }
-        .qa-sticky-header {
-            position: sticky;
-            top: 0;
-            z-index: 20;
-            background: rgba(249, 250, 251, 0.94);
-            backdrop-filter: blur(10px);
-            padding: 0.2rem 0 0.7rem 0;
+        .qa-app-shell {
+            height: calc(100vh - 2.5rem);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .qa-header-dock {
+            flex-shrink: 0;
+            padding: 0 0 0.8rem 0;
             border-bottom: 1px solid rgba(17, 24, 39, 0.08);
-            margin-bottom: 0.8rem;
+            background: rgba(249, 250, 251, 0.97);
         }
         .qa-header-row {
             display: flex;
@@ -56,9 +58,13 @@ def _inject_styles() -> None:
             line-height: 1.45;
             margin-top: 0.24rem;
         }
+        .qa-status-note {
+            margin-top: 0.35rem;
+        }
         .qa-conversation-shell {
-            min-height: 54vh;
-            padding: 0.15rem 0 0.5rem 0;
+            flex: 1;
+            min-height: 0;
+            padding: 0.4rem 0.15rem 0.9rem 0.15rem;
         }
         .qa-empty-state {
             border: 1px dashed #d8e0ea;
@@ -182,16 +188,13 @@ def _inject_styles() -> None:
             color: #334155;
             font-size: 0.78rem;
         }
-        .qa-sticky-composer {
-            position: sticky;
-            bottom: 0;
-            z-index: 25;
+        .qa-composer-dock {
+            flex-shrink: 0;
             background: linear-gradient(to top, rgba(249, 250, 251, 0.98), rgba(249, 250, 251, 0.94));
-            padding-top: 0.65rem;
+            border-top: 1px solid rgba(17, 24, 39, 0.08);
+            padding-top: 0.7rem;
         }
         .qa-composer-card {
-            border-top: 1px solid rgba(17, 24, 39, 0.08);
-            padding-top: 0.8rem;
             padding-bottom: 0.2rem;
         }
         .qa-chip-note {
@@ -278,6 +281,39 @@ def _format_source_label(source: str) -> str:
     return source.replace(" -- ", " - ")
 
 
+def _deduplicate_display_sources(sources_used: list[str]) -> list[str]:
+    deduped: list[str] = []
+    seen: set[str] = set()
+
+    for source in sources_used:
+        display_source = _format_source_label(source)
+        if " | row:" in source:
+            file_name, _, rest = source.partition(" | row: ")
+            row_name = rest.split(" | ", maxsplit=1)[0].strip()
+            display_source = f"{file_name} - {row_name} row"
+        elif " | sorted by:" in source:
+            file_name, _, rest = source.partition(" | sorted by: ")
+            row_name = ""
+            if " | row: " in rest:
+                row_name = rest.split(" | row: ", maxsplit=1)[1].strip()
+            display_source = f"{file_name} - {row_name} row" if row_name else file_name
+        elif " | filter:" in source:
+            file_name = source.split(" | filter:", maxsplit=1)[0].strip()
+            display_source = f"{file_name} - filtered rows"
+        elif " | exists check:" in source:
+            file_name = source.split(" | exists check:", maxsplit=1)[0].strip()
+            display_source = f"{file_name} - existence check"
+        elif " | rows counted" in source:
+            file_name = source.split(" | rows counted", maxsplit=1)[0].strip()
+            display_source = f"{file_name} - row count"
+
+        if display_source not in seen:
+            seen.add(display_source)
+            deduped.append(display_source)
+
+    return deduped
+
+
 def _render_badges(response) -> None:
     badges = [
         f"Route: {response.route.title()}",
@@ -303,15 +339,16 @@ def _render_user_message(question: str) -> None:
 
 
 def _render_answer_card(response) -> None:
+    display_sources = _deduplicate_display_sources(response.sources_used)
     citation_markers = " ".join(
         f"<span class='qa-citation'>[{index}]</span>"
-        for index, _ in enumerate(response.sources_used, start=1)
+        for index, _ in enumerate(display_sources, start=1)
     )
-    source_preview = response.sources_used[:2]
+    source_preview = display_sources[:3]
     preview_html = "".join(
         (
             f"<div class='qa-source-line'><strong>[{index}]</strong> "
-            f"{html.escape(_format_source_label(source))}</div>"
+            f"{html.escape(source)}</div>"
         )
         for index, source in enumerate(source_preview, start=1)
     )
@@ -463,7 +500,7 @@ def _render_header(status_line: str) -> None:
     with header_cols[0]:
         st.markdown(
             (
-                "<div class='qa-sticky-header'>"
+                "<div class='qa-header-dock'>"
                 "<div class='qa-header-row'>"
                 "<div>"
                 "<div class='qa-title'>QuestAI</div>"
@@ -475,7 +512,7 @@ def _render_header(status_line: str) -> None:
             unsafe_allow_html=True,
         )
     with header_cols[1]:
-        st.markdown("<div class='qa-sticky-header'>", unsafe_allow_html=True)
+        st.markdown("<div class='qa-header-dock'>", unsafe_allow_html=True)
         st.button(
             "Clear",
             key="clear-conversation-button",
@@ -498,14 +535,16 @@ def _render_conversation(conversation_history: list[dict[str, object]]) -> None:
             unsafe_allow_html=True,
         )
     else:
-        for turn in conversation_history:
-            _render_user_message(str(turn["question"]))
-            _render_assistant_message(turn["response"])
+        conversation_box = st.container(height=540, border=False)
+        with conversation_box:
+            for turn in conversation_history:
+                _render_user_message(str(turn["question"]))
+                _render_assistant_message(turn["response"])
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_composer(prompt_chips: list[str], answer_service: AnswerService) -> None:
-    st.markdown("<div class='qa-sticky-composer'><div class='qa-composer-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='qa-composer-dock'><div class='qa-composer-card'>", unsafe_allow_html=True)
     st.text_area(
         "Message QuestAI",
         key=QUESTION_INPUT_KEY,
@@ -601,6 +640,7 @@ def run_app() -> None:
     synthesis_status_code, synthesis_status_message = llm_client.get_status()
     retrieval_status = "OpenAI available" if llm_client.is_available() else "Fallback mode"
 
+    st.markdown("<div class='qa-app-shell'>", unsafe_allow_html=True)
     status_line = (
         f"Retrieval synthesis: {retrieval_status} | "
         f"Model: {config.openai_model} | "
@@ -613,13 +653,18 @@ def run_app() -> None:
     _render_header(status_line)
 
     if synthesis_status_code != "success":
+        st.markdown("<div class='qa-status-note'>", unsafe_allow_html=True)
         st.caption(synthesis_status_message)
+        st.markdown("</div>", unsafe_allow_html=True)
     if skipped_pdf_issues:
+        st.markdown("<div class='qa-status-note'>", unsafe_allow_html=True)
         st.caption(
             "Skipped PDF files: "
             + "; ".join(f"{issue.file_name} ({issue.reason})" for issue in skipped_pdf_issues)
         )
+        st.markdown("</div>", unsafe_allow_html=True)
 
     _render_conversation(conversation_history)
     prompt_chips = _build_dynamic_prompt_chips(conversation_history, config)
     _render_composer(prompt_chips, answer_service)
+    st.markdown("</div>", unsafe_allow_html=True)
