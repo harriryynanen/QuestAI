@@ -15,6 +15,7 @@ Operation = Literal[
     "filter",
     "comparison",
     "count",
+    "list",
     "exists",
     "policy_lookup",
     "product_guidance",
@@ -33,6 +34,7 @@ class AnswerResponse:
     retrieved_chunks: list["RetrievedChunk"]
     follow_up_questions: list[str]
     matched_customer_name: str | None = None
+    matched_customer_names: list[str] | None = None
     matched_field_name: str | None = None
     synthesis_method: str = "deterministic"
     synthesis_status: SynthesisStatus | None = None
@@ -108,6 +110,7 @@ class StructuredQueryResult:
     support_level: SupportLevel
     limitations: str
     matched_customer_name: str | None
+    matched_customer_names: list[str] | None
     matched_field_name: str | None
     planning_method: PlanningMethod = "heuristic_fallback"
     planning_reason: str | None = None

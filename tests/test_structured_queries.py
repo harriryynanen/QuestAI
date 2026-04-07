@@ -103,6 +103,31 @@ def test_structured_count_query_is_supported(
     assert "10 customers" in result.answer
 
 
+def test_structured_list_query_is_supported(
+    structured_query_engine,
+    dataframe,
+    dataset_file_name,
+    plan_factory,
+):
+    plan = plan_factory(
+        route="structured",
+        operation="list",
+        needs_structured_data=True,
+    )
+
+    result = structured_query_engine.answer(
+        question="List the customers",
+        dataframe=dataframe,
+        dataset_file_name=dataset_file_name,
+        plan=plan,
+    )
+
+    assert result.support_level == "high"
+    assert "Harbor Foods Demo Oy" in result.answer
+    assert result.matched_customer_names is not None
+    assert len(result.matched_customer_names) == len(dataframe.index)
+
+
 def test_structured_exists_query_is_supported(
     structured_query_engine,
     dataframe,
@@ -144,3 +169,82 @@ def test_finnish_heuristic_fact_query_still_works(
     assert result.support_level in {"medium", "high"}
     assert result.matched_customer_name == "Harbor Foods Demo Oy"
     assert result.matched_field_name == "equity_ratio_pct"
+
+
+def test_count_followed_by_name_those_customers_lists_current_dataset(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="unknown",
+            operation="unknown",
+            confidence="low",
+            reason="Use fallback behavior in tests.",
+        )
+    )
+    service = answer_service_factory(planning_result=planning_result)
+
+    first_response = service.answer_question("How many customers are there in the data?")
+    follow_up_response = service.answer_question(
+        "Name those customers",
+        conversation_turns=[{"question": "How many customers are there in the data?", "response": first_response}],
+    )
+
+    assert first_response.route == "structured"
+    assert "10 customers" in first_response.answer
+    assert follow_up_response.route == "structured"
+    assert "Customer names in scope:" in follow_up_response.answer
+    assert "Harbor Foods Demo Oy" in follow_up_response.answer
+    assert "10 customers" not in follow_up_response.answer
+
+
+def test_filter_follow_up_who_are_they_lists_matching_customers(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="unknown",
+            operation="unknown",
+            confidence="low",
+            reason="Use fallback behavior in tests.",
+        )
+    )
+    service = answer_service_factory(planning_result=planning_result)
+
+    first_response = service.answer_question("Which customers have tax arrears?")
+    follow_up_response = service.answer_question(
+        "Who are they?",
+        conversation_turns=[{"question": "Which customers have tax arrears?", "response": first_response}],
+    )
+
+    assert first_response.route == "structured"
+    assert "Bright Forge Test Ltd" in first_response.answer
+    assert follow_up_response.route == "structured"
+    assert "Customer names in scope:" in follow_up_response.answer
+    assert "Bright Forge Test Ltd" in follow_up_response.answer
+
+
+def test_ambiguous_list_follow_up_without_reference_is_handled_safely(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="unknown",
+            operation="unknown",
+            confidence="low",
+            reason="Use fallback behavior in tests.",
+        )
+    )
+    service = answer_service_factory(planning_result=planning_result)
+
+    response = service.answer_question("Name those customers")
+
+    assert response.route == "unknown" or response.route == "structured"
+    assert response.support_level == "low"
+    assert "could not determine" in response.answer.lower() or "could not route" in response.answer.lower()

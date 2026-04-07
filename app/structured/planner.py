@@ -6,8 +6,15 @@ class StructuredQueryPlanner:
     def __init__(self, llm_client: OpenAIAppClient) -> None:
         self.llm_client = llm_client
 
-    def plan(self, question: str) -> SemanticPlanningResult:
-        return self.llm_client.plan_question(question)
+    def plan(
+        self,
+        question: str,
+        conversation_context: str | None = None,
+    ) -> SemanticPlanningResult:
+        return self.llm_client.plan_question(
+            question=question,
+            conversation_context=conversation_context,
+        )
 
     @staticmethod
     def heuristic_fallback_plan(reason: str) -> SemanticQueryPlan:

@@ -45,28 +45,41 @@ def build_retrieval_messages(
     ]
 
 
-def build_semantic_plan_messages(question: str) -> list[dict[str, str]]:
+def build_semantic_plan_messages(
+    question: str,
+    conversation_context: str | None = None,
+) -> list[dict[str, str]]:
     instructions = (
         "Interpret the user's question into a constrained semantic plan for a fictional business banking advisory demo. "
         "Do not answer the question. "
         "Return JSON with exactly these keys: route, operation, customer_name, field_name, product_name, document_topic, comparison_direction, filter_value, needs_documents, needs_structured_data, confidence, reason. "
         "route must be one of: retrieval, structured, combined, unknown. "
-        "operation must be one of: fact, filter, comparison, count, exists, policy_lookup, product_guidance, preliminary_assessment, unknown. "
+        "operation must be one of: fact, filter, comparison, count, list, exists, policy_lookup, product_guidance, preliminary_assessment, unknown. "
         "confidence must be one of: low, medium, high. "
         "field_name should use only supported internal column names when known, otherwise null. "
         "Supported field_name values include: latest_revenue_eur, ebitda_eur, ebitda_margin_pct, equity_ratio_pct, debt_to_ebitda, years_in_operation, b2b_invoicing_pct, export_sales_pct, has_tax_arrears, latest_financials_available, payment_delays_12m, largest_customer_share_pct, requested_product_interest. "
         "comparison_direction must be highest, lowest, or null. "
         "Use retrieval for questions about policies, guides, guidance, criteria, product descriptions, or document interpretation. "
-        "Use structured for customer facts, filters, counts, existence checks, or comparisons from CSV data. "
+        "Use structured for customer facts, filters, counts, list requests, existence checks, or comparisons from CSV data. "
         "Use combined only when the question explicitly needs both document guidance and customer-specific structured data together. "
         "Use unknown when the question is too unclear to map safely. "
+        "If recent conversation context is provided, use it only to resolve follow-up references such as 'those customers', 'they', or 'that customer'. "
+        "Do not repeat the previous operation blindly just because similar wording appeared in the context. "
         "Support modest English and Finnish business wording variation."
     )
 
-    user_message = (
-        f"Question:\n{question}\n\n"
-        "Interpret only into a safe semantic plan. Do not invent missing data and do not answer the question itself."
-    )
+    if conversation_context:
+        user_message = (
+            f"Current question:\n{question}\n\n"
+            f"Recent conversation context:\n{conversation_context}\n\n"
+            "Interpret only into a safe semantic plan. Use the context only to resolve references. "
+            "Do not invent missing data and do not answer the question itself."
+        )
+    else:
+        user_message = (
+            f"Current question:\n{question}\n\n"
+            "Interpret only into a safe semantic plan. Do not invent missing data and do not answer the question itself."
+        )
 
     return [
         {"role": "system", "content": instructions},

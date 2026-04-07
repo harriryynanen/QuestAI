@@ -126,6 +126,7 @@ class OpenAIAppClient:
     def plan_question(
         self,
         question: str,
+        conversation_context: str | None = None,
     ) -> SemanticPlanningResult:
         fallback_plan = SemanticQueryPlan(
             route="unknown",
@@ -159,7 +160,10 @@ class OpenAIAppClient:
             client = self._get_client()
             response = client.responses.create(
                 model=self.model,
-                input=build_semantic_plan_messages(question=question),
+                input=build_semantic_plan_messages(
+                    question=question,
+                    conversation_context=conversation_context,
+                ),
                 text={
                     "format": {
                         "type": "json_schema",
@@ -179,6 +183,7 @@ class OpenAIAppClient:
                                         "filter",
                                         "comparison",
                                         "count",
+                                        "list",
                                         "exists",
                                         "policy_lookup",
                                         "product_guidance",

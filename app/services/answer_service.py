@@ -43,14 +43,23 @@ class AnswerService:
     def answer_question(
         self,
         question: str,
-        conversation_context: str | None = None,
+        conversation_turns: list[dict[str, object]] | None = None,
     ) -> AnswerResponse:
-        contextual_question = self._build_contextual_question(
-            question=question,
-            conversation_context=conversation_context,
+        planner_context = self._build_planner_context(
+            conversation_turns=conversation_turns,
         )
-        planning_result = self.structured_query_planner.plan(contextual_question)
-        routing_decision = self._route_question(contextual_question, planning_result)
+        planning_result = self.structured_query_planner.plan(
+            question=question,
+            conversation_context=planner_context,
+        )
+        resolved_follow_up = self._resolve_structured_follow_up(
+            question=question,
+            conversation_turns=conversation_turns,
+        )
+        if resolved_follow_up is not None:
+            planning_result = resolved_follow_up
+
+        routing_decision = self._route_question(question, planning_result)
         route = routing_decision.route
         dataset_info = self.customer_data_loader.get_data_info()
         dataframe = self.customer_data_loader.get_dataframe()
@@ -58,20 +67,25 @@ class AnswerService:
         retrieval_documents = self.document_store.load_retrieval_documents()
         chunks = self.chunker.chunk_documents(retrieval_documents)
         semantic_plan = planning_result.plan if planning_result.status == "success" else None
+        resolved_customer_names = self._resolve_customer_names_from_context(
+            question=question,
+            conversation_turns=conversation_turns,
+        )
 
         if route == "unknown":
             return self._build_unclear_routing_response(routing_decision)
 
         if route == "retrieval":
-            retrieved_chunks = self.retriever.retrieve(question=contextual_question, chunks=chunks)
-            return self._build_retrieval_response(contextual_question, retrieved_chunks, routing_decision)
+            retrieved_chunks = self.retriever.retrieve(question=question, chunks=chunks)
+            return self._build_retrieval_response(question, retrieved_chunks, routing_decision)
 
         if route == "structured":
             structured_result = self.structured_query_engine.answer(
-                question=contextual_question,
+                question=question,
                 dataframe=dataframe,
                 dataset_file_name=dataset_file_name,
                 plan=semantic_plan,
+                resolved_customer_names=resolved_customer_names,
             )
             planning_reason = structured_result.planning_reason
             if planning_result.status != "success":
@@ -93,6 +107,7 @@ class AnswerService:
                     matched_field_name=structured_result.matched_field_name,
                 ),
                 matched_customer_name=structured_result.matched_customer_name,
+                matched_customer_names=structured_result.matched_customer_names,
                 matched_field_name=structured_result.matched_field_name,
                 synthesis_method="deterministic",
                 synthesis_status=None,
@@ -105,7 +120,7 @@ class AnswerService:
             )
 
         return self._build_combined_response(
-            question=contextual_question,
+            question=question,
             routing_decision=routing_decision,
             planning_result=planning_result,
             semantic_plan=semantic_plan,
@@ -575,18 +590,111 @@ class AnswerService:
             return "medium"
         return proposed
 
-    def _build_contextual_question(
+    def _build_planner_context(
+        self,
+        conversation_turns: list[dict[str, object]] | None,
+    ) -> str | None:
+        if not conversation_turns:
+            return None
+
+        recent_turns = conversation_turns[-3:]
+        lines: list[str] = []
+        for turn in recent_turns:
+            question = str(turn["question"]).strip()
+            response = turn["response"]
+            lines.append(f"User: {question}")
+            lines.append(f"Assistant route: {response.route}")
+            if response.matched_customer_name:
+                lines.append(f"Matched customer: {response.matched_customer_name}")
+            if response.matched_customer_names:
+                lines.append(
+                    "Matched customer names: " + ", ".join(response.matched_customer_names)
+                )
+            lines.append(f"Assistant answer: {' '.join(response.answer.split())}")
+        return "\n".join(lines)
+
+    def _resolve_structured_follow_up(
         self,
         question: str,
-        conversation_context: str | None,
-    ) -> str:
-        if not conversation_context:
-            return question
-        return (
-            "Recent conversation context:\n"
-            f"{conversation_context}\n\n"
-            f"Current user question: {question}"
-        )
+        conversation_turns: list[dict[str, object]] | None,
+    ) -> SemanticPlanningResult | None:
+        if not conversation_turns:
+            return None
+
+        previous_response = conversation_turns[-1]["response"]
+        if previous_response.route != "structured":
+            return None
+
+        normalized = question.lower()
+        reference_terms = ("those", "them", "they", "that customer", "same ones", "same customer")
+        list_terms = ("name", "list", "show", "who are")
+        if any(term in normalized for term in list_terms) and any(
+            term in normalized for term in reference_terms
+        ):
+            return SemanticPlanningResult(
+                plan=SemanticQueryPlan(
+                    route="structured",
+                    operation="list",
+                    customer_name=None,
+                    field_name=None,
+                    product_name=None,
+                    document_topic=None,
+                    comparison_direction=None,
+                    filter_value=None,
+                    needs_documents=False,
+                    needs_structured_data=True,
+                    confidence="high",
+                    reason="Follow-up references previously identified structured customers.",
+                    method="heuristic_fallback",
+                ),
+                status="success",
+                failure_reason=None,
+            )
+
+        if (
+            previous_response.matched_customer_name
+            and "product" in normalized
+            and any(term in normalized for term in ("they", "that customer", "the company"))
+        ):
+            return SemanticPlanningResult(
+                plan=SemanticQueryPlan(
+                    route="structured",
+                    operation="fact",
+                    customer_name=previous_response.matched_customer_name,
+                    field_name="requested_product_interest",
+                    product_name=None,
+                    document_topic=None,
+                    comparison_direction=None,
+                    filter_value=None,
+                    needs_documents=False,
+                    needs_structured_data=True,
+                    confidence="medium",
+                    reason="Follow-up refers to the previously matched structured customer.",
+                    method="heuristic_fallback",
+                ),
+                status="success",
+                failure_reason=None,
+            )
+
+        return None
+
+    def _resolve_customer_names_from_context(
+        self,
+        question: str,
+        conversation_turns: list[dict[str, object]] | None,
+    ) -> list[str] | None:
+        if not conversation_turns:
+            return None
+
+        previous_response = conversation_turns[-1]["response"]
+        normalized = question.lower()
+        if previous_response.route != "structured":
+            return None
+
+        if any(term in normalized for term in ("those", "them", "they", "same ones")):
+            return previous_response.matched_customer_names
+
+        return None
 
     def _build_unclear_routing_response(
         self,

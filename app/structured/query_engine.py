@@ -89,6 +89,7 @@ class StructuredQueryEngine:
         dataframe: pd.DataFrame | None,
         dataset_file_name: str | None,
         plan: SemanticQueryPlan | None = None,
+        resolved_customer_names: list[str] | None = None,
     ) -> StructuredQueryResult:
         if dataframe is None or dataset_file_name is None:
             return StructuredQueryResult(
@@ -97,17 +98,28 @@ class StructuredQueryEngine:
                 support_level="low",
                 limitations="A CSV file must be present and readable before structured questions can be answered.",
                 matched_customer_name=None,
+                matched_customer_names=None,
                 matched_field_name=None,
                 planning_method=plan.method if plan is not None else "heuristic_fallback",
                 planning_reason=plan.reason if plan is not None else None,
             )
 
         if plan is not None and plan.operation != "unknown":
-            planned_result = self._execute_plan(plan, dataframe, dataset_file_name)
+            planned_result = self._execute_plan(
+                plan,
+                dataframe,
+                dataset_file_name,
+                resolved_customer_names=resolved_customer_names,
+            )
             if planned_result is not None:
                 return planned_result
 
-        return self._answer_with_heuristics(question, dataframe, dataset_file_name)
+        return self._answer_with_heuristics(
+            question,
+            dataframe,
+            dataset_file_name,
+            resolved_customer_names=resolved_customer_names,
+        )
 
     def build_combined_evidence(
         self,
@@ -189,6 +201,7 @@ class StructuredQueryEngine:
         question: str,
         dataframe: pd.DataFrame,
         dataset_file_name: str,
+        resolved_customer_names: list[str] | None = None,
     ) -> StructuredQueryResult:
         normalized = self._normalize_text(question)
         field_name = self._match_field(question)
@@ -201,6 +214,15 @@ class StructuredQueryEngine:
         )
         if count_result is not None:
             return count_result
+
+        list_result = self._try_list_question(
+            question=normalized,
+            dataframe=dataframe,
+            dataset_file_name=dataset_file_name,
+            resolved_customer_names=resolved_customer_names,
+        )
+        if list_result is not None:
+            return list_result
 
         exists_result = self._try_exists_question(
             question=normalized,
@@ -221,6 +243,7 @@ class StructuredQueryEngine:
                 support_level="low",
                 limitations="Please ask again with the full customer name.",
                 matched_customer_name=None,
+                matched_customer_names=None,
                 matched_field_name=field_name,
                 planning_method="heuristic_fallback",
                 planning_reason="Heuristic parser found multiple customer matches.",
@@ -234,6 +257,7 @@ class StructuredQueryEngine:
                     support_level="low",
                     limitations="This step supports only explicitly mapped business fields.",
                     matched_customer_name=str(customer_match["matches"][0]),
+                    matched_customer_names=[str(customer_match["matches"][0])],
                     matched_field_name=None,
                     planning_method="heuristic_fallback",
                     planning_reason="Heuristic parser matched a customer but not a supported field.",
@@ -277,6 +301,7 @@ class StructuredQueryEngine:
                 support_level="low",
                 limitations="Try using the full customer name as it appears in the CSV.",
                 matched_customer_name=None,
+                matched_customer_names=None,
                 matched_field_name=field_name,
                 planning_method="heuristic_fallback",
                 planning_reason="Heuristic parser recognized a customer-style question but found no safe match.",
@@ -288,6 +313,7 @@ class StructuredQueryEngine:
             support_level="low",
             limitations="This step supports customer facts, simple comparisons, filters, counts, and existence checks only.",
             matched_customer_name=None,
+            matched_customer_names=None,
             matched_field_name=field_name,
             planning_method="heuristic_fallback",
             planning_reason="Heuristic parser could not map the question safely.",
@@ -298,6 +324,7 @@ class StructuredQueryEngine:
         plan: SemanticQueryPlan,
         dataframe: pd.DataFrame,
         dataset_file_name: str,
+        resolved_customer_names: list[str] | None = None,
     ) -> StructuredQueryResult | None:
         customer_match = (
             self._match_customer(plan.customer_name, dataframe)
@@ -315,6 +342,7 @@ class StructuredQueryEngine:
                 support_level="low",
                 limitations="Please ask again with the full customer name.",
                 matched_customer_name=None,
+                matched_customer_names=None,
                 matched_field_name=plan.field_name,
                 planning_method=plan.method,
                 planning_reason=plan.reason,
@@ -327,6 +355,37 @@ class StructuredQueryEngine:
                 support_level="high",
                 limitations="This count reflects only the current CSV rows.",
                 matched_customer_name=None,
+                matched_customer_names=dataframe["customer_name"].astype(str).tolist(),
+                matched_field_name=None,
+                planning_method=plan.method,
+                planning_reason=plan.reason,
+            )
+
+        if plan.operation == "list":
+            names_to_list = resolved_customer_names
+            if names_to_list is None:
+                names_to_list = dataframe["customer_name"].astype(str).tolist()
+
+            if not names_to_list:
+                return StructuredQueryResult(
+                    answer="I could not determine which customers you mean from the recent conversation.",
+                    sources_used=[dataset_file_name],
+                    support_level="low",
+                    limitations="The follow-up reference was ambiguous or the referenced result set was empty.",
+                    matched_customer_name=None,
+                    matched_customer_names=[],
+                    matched_field_name=None,
+                    planning_method=plan.method,
+                    planning_reason=plan.reason,
+                )
+
+            return StructuredQueryResult(
+                answer=f"Customer names in scope: {', '.join(names_to_list)}.",
+                sources_used=[f"{dataset_file_name} | listed rows"],
+                support_level="high",
+                limitations="This list is taken directly from the current CSV rows in scope.",
+                matched_customer_name=names_to_list[0] if len(names_to_list) == 1 else None,
+                matched_customer_names=names_to_list,
                 matched_field_name=None,
                 planning_method=plan.method,
                 planning_reason=plan.reason,
@@ -353,6 +412,7 @@ class StructuredQueryEngine:
                 support_level="high",
                 limitations="This answer reflects only the current CSV rows.",
                 matched_customer_name=None,
+                matched_customer_names=matches["customer_name"].astype(str).tolist(),
                 matched_field_name=plan.field_name,
                 planning_method=plan.method,
                 planning_reason=plan.reason,
@@ -417,6 +477,7 @@ class StructuredQueryEngine:
                 support_level="high",
                 limitations="This answer is based only on the current CSV values and does not include document context.",
                 matched_customer_name=customer_name,
+                matched_customer_names=[customer_name],
                 matched_field_name=plan.field_name,
                 planning_method=plan.method,
                 planning_reason=plan.reason,
@@ -443,6 +504,7 @@ class StructuredQueryEngine:
                 support_level="low",
                 limitations="The dataset row exists, but this field is empty.",
                 matched_customer_name=customer_name,
+                matched_customer_names=[customer_name],
                 matched_field_name=field_name,
                 planning_method=planning_method,
                 planning_reason=planning_reason,
@@ -460,6 +522,7 @@ class StructuredQueryEngine:
             support_level="high",
             limitations="This answer is taken directly from the CSV and does not include document-based interpretation.",
             matched_customer_name=customer_name,
+            matched_customer_names=[customer_name],
             matched_field_name=field_name,
             planning_method=planning_method,
             planning_reason=planning_reason,
@@ -484,11 +547,60 @@ class StructuredQueryEngine:
                 support_level="high",
                 limitations="This count reflects only the current CSV rows.",
                 matched_customer_name=None,
+                matched_customer_names=dataframe["customer_name"].astype(str).tolist(),
                 matched_field_name=None,
                 planning_method="heuristic_fallback",
                 planning_reason="Heuristic parser matched a count question.",
             )
         return None
+
+    def _try_list_question(
+        self,
+        question: str,
+        dataframe: pd.DataFrame,
+        dataset_file_name: str,
+        resolved_customer_names: list[str] | None,
+    ) -> StructuredQueryResult | None:
+        list_phrases = (
+            "name those customers",
+            "name them",
+            "name those",
+            "list the customers",
+            "list customers",
+            "show the customer names",
+            "show customer names",
+            "who are they",
+            "name those customer",
+        )
+        if not any(phrase in question for phrase in list_phrases):
+            return None
+
+        has_reference = any(term in question for term in ("those", "them", "they", "same"))
+        if has_reference and resolved_customer_names is None:
+            return StructuredQueryResult(
+                answer="I could not determine which customers you mean from the recent conversation.",
+                sources_used=[dataset_file_name],
+                support_level="low",
+                limitations="Please restate which customer group you want listed.",
+                matched_customer_name=None,
+                matched_customer_names=None,
+                matched_field_name=None,
+                planning_method="heuristic_fallback",
+                planning_reason="Heuristic parser detected a follow-up list request without a safe reference.",
+            )
+
+        names = resolved_customer_names or dataframe["customer_name"].astype(str).tolist()
+        return StructuredQueryResult(
+            answer=f"Customer names in scope: {', '.join(names)}.",
+            sources_used=[f"{dataset_file_name} | listed rows"],
+            support_level="high",
+            limitations="This list is taken directly from the current CSV rows in scope.",
+            matched_customer_name=names[0] if len(names) == 1 else None,
+            matched_customer_names=names,
+            matched_field_name=None,
+            planning_method="heuristic_fallback",
+            planning_reason="Heuristic parser matched a customer listing request.",
+        )
 
     def _try_exists_question(
         self,
@@ -530,6 +642,7 @@ class StructuredQueryEngine:
             support_level="high",
             limitations="This answer reflects only the current CSV rows.",
             matched_customer_name=None,
+            matched_customer_names=matches["customer_name"].astype(str).tolist(),
             matched_field_name=field_name,
             planning_method="heuristic_fallback",
             planning_reason="Heuristic parser matched an existence question.",
@@ -577,6 +690,7 @@ class StructuredQueryEngine:
             support_level="high",
             limitations="This answer is based only on the current CSV values and does not include document context.",
             matched_customer_name=customer_name,
+            matched_customer_names=[customer_name],
             matched_field_name=field_name,
             planning_method=planning_method,
             planning_reason=planning_reason,
@@ -602,6 +716,7 @@ class StructuredQueryEngine:
                     support_level="low",
                     limitations="Ask using a product name that appears in the dataset.",
                     matched_customer_name=None,
+                    matched_customer_names=None,
                     matched_field_name=field_name,
                     planning_method=planning_method,
                     planning_reason=planning_reason,
@@ -654,6 +769,7 @@ class StructuredQueryEngine:
                 support_level="high",
                 limitations="This result reflects only the current CSV rows.",
                 matched_customer_name=None,
+                matched_customer_names=[],
                 matched_field_name=field_name,
                 planning_method=planning_method,
                 planning_reason=planning_reason,
@@ -666,6 +782,7 @@ class StructuredQueryEngine:
             support_level="high",
             limitations="This result reflects only the current CSV rows and does not include policy interpretation.",
             matched_customer_name=None,
+            matched_customer_names=names,
             matched_field_name=field_name,
             planning_method=planning_method,
             planning_reason=planning_reason,

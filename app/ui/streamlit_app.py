@@ -22,41 +22,51 @@ def _inject_styles() -> None:
     st.markdown(
         """
         <style>
+        :root {
+            --qa-bg: #f6f7fb;
+            --qa-panel: #ffffff;
+            --qa-border: #dfe3ea;
+            --qa-text: #162033;
+            --qa-muted: #6d7890;
+            --qa-accent: #0f8b8d;
+            --qa-chip: #eef2f8;
+            --qa-shadow: 0 8px 30px rgba(18, 31, 53, 0.08);
+            --qa-content-width: 900px;
+            --qa-header-height: 116px;
+            --qa-composer-height: 222px;
+            --qa-radius: 18px;
+        }
+        html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"], .stApp {
+            background: var(--qa-bg);
+        }
         .block-container {
-            max-width: 900px;
-            padding-top: 9.5rem;
-            padding-bottom: 15rem;
+            max-width: var(--qa-content-width);
+            padding-top: calc(var(--qa-header-height) + 2rem);
+            padding-bottom: calc(var(--qa-composer-height) + 2rem);
         }
-        .qa-top-spacer {
-            height: 0.35rem;
-        }
-        .qa-bottom-spacer {
-            height: 0.85rem;
-        }
-        div[data-testid="stVerticalBlock"] > div:has(.qa-header-anchor) {
+        div[data-testid="stVerticalBlock"] > div:has(.qa-fixed-header-anchor) {
             position: fixed;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: min(900px, calc(100vw - 2rem));
+            inset: 0 0 auto 0;
             z-index: 1000;
-            background: rgba(249, 250, 251, 0.98);
-            padding-top: 0.75rem;
+            background: rgba(246, 247, 251, 0.94);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(223, 227, 234, 0.85);
         }
-        div[data-testid="stVerticalBlock"] > div:has(.qa-composer-anchor) {
+        div[data-testid="stVerticalBlock"] > div:has(.qa-fixed-composer-anchor) {
             position: fixed;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: min(900px, calc(100vw - 2rem));
+            inset: auto 0 0 0;
             z-index: 1000;
-            background: linear-gradient(to top, rgba(249, 250, 251, 0.99), rgba(249, 250, 251, 0.96));
-            padding-bottom: 0.8rem;
+            background: linear-gradient(to top, rgba(246, 247, 251, 0.98), rgba(246, 247, 251, 0.92));
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(223, 227, 234, 0.85);
         }
-        .qa-header-dock {
-            padding: 0 0 0.8rem 0;
-            border-bottom: 1px solid rgba(17, 24, 39, 0.08);
-            background: transparent;
+        .qa-fixed-shell {
+            width: min(calc(100vw - 24px), var(--qa-content-width));
+            margin: 0 auto;
+        }
+        .qa-header-shell {
+            min-height: var(--qa-header-height);
+            padding: 0.95rem 0 0.85rem 0;
         }
         .qa-header-row {
             display: flex;
@@ -64,61 +74,67 @@ def _inject_styles() -> None:
             justify-content: space-between;
             gap: 1rem;
         }
+        .qa-brand-wrap {
+            min-width: 0;
+        }
         .qa-title {
-            font-size: 1.85rem;
+            margin: 0 0 0.25rem 0;
+            color: var(--qa-text);
+            font-size: 1.95rem;
             font-weight: 700;
             letter-spacing: -0.03em;
-            color: #111827;
-            margin: 0;
+            line-height: 1.05;
         }
         .qa-status-line {
-            color: #5b6474;
+            color: var(--qa-muted);
             font-size: 0.83rem;
             line-height: 1.45;
-            margin-top: 0.24rem;
         }
         .qa-status-note {
-            margin-top: 0.35rem;
+            width: min(calc(100vw - 24px), var(--qa-content-width));
+            margin: 0.35rem auto 0 auto;
         }
-        .qa-conversation-shell {
-            padding: 0.1rem 0.15rem 0.9rem 0.15rem;
+        .qa-chat-shell {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+            padding-top: 1.3rem;
         }
-        .qa-user-wrap {
+        .qa-user-row {
             display: flex;
             justify-content: flex-end;
-            margin: 0.75rem 0;
+            width: 100%;
         }
         .qa-user-message {
             display: flex;
             align-items: flex-end;
-            gap: 0.6rem;
-            max-width: 82%;
             justify-content: flex-end;
+            gap: 0.65rem;
+            width: 100%;
         }
         .qa-user-bubble {
-            background: #eceff3;
+            max-width: 78%;
+            background: #e9edf4;
             border: 1px solid #dbe1e8;
-            border-radius: 18px 18px 6px 18px;
-            padding: 0.86rem 1rem;
-            color: #111827;
-            line-height: 1.58;
+            border-radius: 18px 18px 8px 18px;
+            padding: 0.9rem 1rem;
+            color: var(--qa-text);
+            font-size: 0.96rem;
+            line-height: 1.5;
             white-space: pre-wrap;
+            box-shadow: 0 3px 12px rgba(18, 31, 53, 0.05);
         }
-        .qa-assistant-wrap {
+        .qa-assistant-row {
             display: flex;
             justify-content: flex-start;
-            margin: 0.9rem 0 1.1rem 0;
+            width: 100%;
         }
         .qa-assistant-message {
             display: flex;
             align-items: flex-start;
-            gap: 0.75rem;
+            gap: 0.8rem;
             width: 100%;
-        }
-        .qa-assistant-main {
-            flex: 1;
-            min-width: 0;
-            max-width: 100%;
         }
         .qa-avatar {
             width: 2rem;
@@ -127,9 +143,9 @@ def _inject_styles() -> None:
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.78rem;
-            font-weight: 700;
             flex-shrink: 0;
+            font-size: 0.76rem;
+            font-weight: 700;
         }
         .qa-avatar-user {
             background: #dfe4eb;
@@ -141,103 +157,162 @@ def _inject_styles() -> None:
             color: #1f3b5b;
             border: 1px solid #d3dfef;
         }
+        .qa-assistant-main {
+            width: min(100%, 840px);
+            min-width: 0;
+        }
         .qa-answer-card {
-            border: 1px solid rgba(49, 51, 63, 0.11);
-            border-radius: 18px;
-            background: #ffffff;
-            padding: 1rem 1rem 0.9rem 1rem;
-            box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+            background: var(--qa-panel);
+            border: 1px solid var(--qa-border);
+            border-radius: 20px;
+            padding: 1rem;
+            box-shadow: var(--qa-shadow);
         }
         .qa-answer-label {
-            font-size: 0.78rem;
+            font-size: 0.7rem;
             font-weight: 700;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.08em;
+            color: var(--qa-muted);
             text-transform: uppercase;
-            color: #667085;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.65rem;
         }
         .qa-answer-text {
-            color: #111827;
-            font-size: 1.02rem;
-            line-height: 1.8;
+            color: var(--qa-text);
+            font-size: 1rem;
+            line-height: 1.6;
             white-space: pre-wrap;
+            margin-bottom: 0.85rem;
         }
         .qa-citations {
-            margin-top: 0.75rem;
+            margin-bottom: 0.45rem;
         }
         .qa-citation {
-            display: inline-block;
-            margin: 0 0.32rem 0.32rem 0;
-            padding: 0.08rem 0.38rem;
-            border-radius: 7px;
-            background: #f3f5f8;
-            border: 1px solid #e2e7ef;
-            color: #374151;
-            font-size: 0.83rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            height: 28px;
+            margin-right: 0.35rem;
+            margin-bottom: 0.35rem;
+            padding: 0 0.32rem;
+            border: 1px solid var(--qa-border);
+            border-radius: 8px;
+            background: #f8fafc;
+            color: #4e5a72;
+            font-size: 0.8rem;
             font-weight: 600;
         }
         .qa-source-preview {
-            margin-top: 0.55rem;
-            color: #596579;
-            font-size: 0.88rem;
+            color: var(--qa-muted);
+            font-size: 0.82rem;
+            line-height: 1.45;
+            margin-bottom: 0.75rem;
         }
         .qa-source-line {
-            margin: 0.16rem 0;
+            margin: 0.12rem 0;
         }
         .qa-badge-row {
-            margin-top: 0.7rem;
+            margin-top: 0.15rem;
         }
         .qa-badge {
             display: inline-block;
             margin: 0 0.35rem 0.35rem 0;
-            padding: 0.18rem 0.58rem;
+            padding: 0.38rem 0.65rem;
             border-radius: 999px;
-            border: 1px solid #d7deea;
-            background: #eef2f7;
-            color: #334155;
-            font-size: 0.78rem;
+            background: var(--qa-chip);
+            border: 1px solid #d7dfeb;
+            color: #53617d;
+            font-size: 0.75rem;
+            line-height: 1;
         }
-        .qa-composer-dock {
-            background: linear-gradient(to top, rgba(249, 250, 251, 0.98), rgba(249, 250, 251, 0.94));
-            border-top: 1px solid rgba(17, 24, 39, 0.08);
-            padding-top: 0.7rem;
+        .qa-composer-shell {
+            width: min(calc(100vw - 24px), var(--qa-content-width));
+            margin: 0 auto;
+            padding: 0.85rem 0 1rem 0;
         }
-        .qa-composer-card {
-            padding-bottom: 0.2rem;
+        .qa-input-wrap {
+            background: var(--qa-panel);
+            border: 1px solid var(--qa-border);
+            border-radius: 18px;
+            padding: 0.75rem;
+            box-shadow: var(--qa-shadow);
+        }
+        .qa-composer-bottom {
+            margin-top: 0.75rem;
         }
         .qa-chip-note {
-            color: #6b7280;
+            color: var(--qa-muted);
             font-size: 0.8rem;
             margin-bottom: 0.35rem;
         }
         .qa-composer-help {
-            color: #6b7280;
-            font-size: 0.79rem;
-            margin-top: 0.35rem;
+            color: var(--qa-muted);
+            font-size: 0.78rem;
+            line-height: 1.4;
+            padding-top: 0.2rem;
         }
         div[data-testid="stTextArea"] textarea {
-            border-radius: 18px !important;
-            min-height: 118px !important;
-        }
-        div[data-testid="stButton"] > button[kind="primary"] {
-            border-radius: 999px !important;
-            min-width: 2.7rem !important;
-            width: 2.7rem !important;
-            height: 2.7rem !important;
+            border: 0 !important;
+            outline: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+            color: var(--qa-text) !important;
+            min-height: 56px !important;
+            max-height: 132px !important;
             padding: 0 !important;
-            font-size: 1rem !important;
+            font-size: 0.95rem !important;
+            line-height: 1.5 !important;
+            resize: none !important;
+        }
+        div[data-testid="stTextArea"] > div {
+            background: transparent !important;
+            border: 0 !important;
         }
         div[data-testid="stButton"] > button {
             border-radius: 999px;
         }
-        @media (max-width: 900px) {
-            .block-container {
-                padding-top: 10.25rem;
-                padding-bottom: 16rem;
+        div[data-testid="stButton"] > button[kind="primary"] {
+            width: 46px !important;
+            min-width: 46px !important;
+            height: 46px !important;
+            padding: 0 !important;
+            border-radius: 999px !important;
+            font-size: 1.3rem !important;
+            background: var(--qa-accent) !important;
+            border: 0 !important;
+        }
+        .qa-clear-wrap div[data-testid="stButton"] > button {
+            border: 1px solid var(--qa-border) !important;
+            background: var(--qa-panel) !important;
+            color: var(--qa-text) !important;
+            border-radius: 12px !important;
+            padding: 0.68rem 1rem !important;
+            min-height: 46px !important;
+            box-shadow: 0 2px 8px rgba(18, 31, 53, 0.04);
+        }
+        @media (max-width: 768px) {
+            :root {
+                --qa-header-height: 132px;
+                --qa-composer-height: 252px;
             }
-            div[data-testid="stVerticalBlock"] > div:has(.qa-header-anchor),
-            div[data-testid="stVerticalBlock"] > div:has(.qa-composer-anchor) {
-                width: calc(100vw - 1rem);
+            .block-container {
+                padding-top: calc(var(--qa-header-height) + 1.6rem);
+                padding-bottom: calc(var(--qa-composer-height) + 1.6rem);
+            }
+            .qa-header-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .qa-clear-wrap {
+                align-self: flex-end;
+                width: 100%;
+                max-width: 120px;
+            }
+            .qa-user-bubble {
+                max-width: 92%;
+            }
+            .qa-assistant-main {
+                width: 100%;
             }
         }
         </style>
@@ -262,21 +337,6 @@ def _clear_conversation() -> None:
     st.session_state[QUESTION_INPUT_KEY] = ""
 
 
-def _build_conversation_context(turns: list[dict[str, object]], max_turns: int = 3) -> str | None:
-    if not turns:
-        return None
-
-    recent_turns = turns[-max_turns:]
-    lines: list[str] = []
-    for turn in recent_turns:
-        question = str(turn["question"]).strip()
-        response = turn["response"]
-        answer = " ".join(response.answer.split())
-        lines.append(f"User: {question}")
-        lines.append(f"Assistant: {answer}")
-    return "\n".join(lines)
-
-
 def _submit_question(answer_service: AnswerService) -> None:
     question = st.session_state.get(QUESTION_INPUT_KEY, "").strip()
     if not question:
@@ -284,10 +344,9 @@ def _submit_question(answer_service: AnswerService) -> None:
         return
 
     conversation_history = st.session_state[CONVERSATION_KEY]
-    conversation_context = _build_conversation_context(conversation_history)
     response = answer_service.answer_question(
         question=question,
-        conversation_context=conversation_context,
+        conversation_turns=conversation_history,
     )
     conversation_history.append({"question": question, "response": response})
     st.session_state[QUESTION_INPUT_KEY] = ""
@@ -324,6 +383,9 @@ def _deduplicate_display_sources(sources_used: list[str]) -> list[str]:
         elif " | rows counted" in source:
             file_name = source.split(" | rows counted", maxsplit=1)[0].strip()
             display_source = f"{file_name} - row count"
+        elif " | listed rows" in source:
+            file_name = source.split(" | listed rows", maxsplit=1)[0].strip()
+            display_source = f"{file_name} - listed rows"
 
         if display_source not in seen:
             seen.add(display_source)
@@ -338,14 +400,16 @@ def _render_badges(response) -> None:
         f"Support: {response.support_level.title()}",
         f"Synthesis: {response.synthesis_method.replace('_', ' ').title()}",
     ]
-    badge_html = "".join(f"<span class='qa-badge'>{html.escape(badge)}</span>" for badge in badges)
+    badge_html = "".join(
+        f"<span class='qa-badge'>{html.escape(badge)}</span>" for badge in badges
+    )
     st.markdown(f"<div class='qa-badge-row'>{badge_html}</div>", unsafe_allow_html=True)
 
 
 def _render_user_message(question: str) -> None:
     st.markdown(
         (
-            "<div class='qa-user-wrap'>"
+            "<div class='qa-user-row'>"
             "<div class='qa-user-message'>"
             f"<div class='qa-user-bubble'>{html.escape(question)}</div>"
             "<div class='qa-avatar qa-avatar-user'>You</div>"
@@ -392,11 +456,13 @@ def _render_answer_details(response) -> None:
         )
         if response.routing_reason:
             st.caption(
-                f"Routing: {response.route} ({response.routing_method}, {response.routing_confidence} confidence) - "
-                f"{response.routing_reason}"
+                f"Routing: {response.route} ({response.routing_method}, "
+                f"{response.routing_confidence} confidence) - {response.routing_reason}"
             )
         if response.planning_reason:
-            st.caption(f"Structured planning: {response.planning_method} - {response.planning_reason}")
+            st.caption(
+                f"Structured planning: {response.planning_method} - {response.planning_reason}"
+            )
         if response.synthesis_status_message:
             st.caption(response.synthesis_status_message)
 
@@ -419,7 +485,8 @@ def _render_answer_details(response) -> None:
             for item in response.retrieved_chunks:
                 heading = item.chunk.section_heading or "No heading"
                 st.write(
-                    f"- {item.chunk.file_name} -- {heading} | {item.chunk.chunk_id} | score={item.score:.1f}"
+                    f"- {item.chunk.file_name} -- {heading} | "
+                    f"{item.chunk.chunk_id} | score={item.score:.1f}"
                 )
                 st.caption(item.match_summary)
                 st.caption(item.chunk.text)
@@ -431,7 +498,7 @@ def _render_answer_details(response) -> None:
 def _render_assistant_message(response) -> None:
     st.markdown(
         (
-            "<div class='qa-assistant-wrap'>"
+            "<div class='qa-assistant-row'>"
             "<div class='qa-assistant-message'>"
             "<div class='qa-avatar qa-avatar-assistant'>Q</div>"
             "<div class='qa-assistant-main'>"
@@ -514,14 +581,15 @@ def _build_dynamic_prompt_chips(conversation_history: list[dict[str, object]], c
 
 
 def _render_header(status_line: str) -> None:
-    st.markdown("<div class='qa-header-anchor'></div>", unsafe_allow_html=True)
-    header_cols = st.columns([12, 2], gap="small")
+    st.markdown("<div class='qa-fixed-header-anchor'></div>", unsafe_allow_html=True)
+    st.markdown("<div class='qa-fixed-shell qa-header-shell'>", unsafe_allow_html=True)
+    header_cols = st.columns([12, 2], gap="large")
     with header_cols[0]:
         st.markdown(
             (
                 "<div class='qa-header-dock'>"
                 "<div class='qa-header-row'>"
-                "<div>"
+                "<div class='qa-brand-wrap'>"
                 "<div class='qa-title'>QuestAI</div>"
                 f"<div class='qa-status-line'>{html.escape(status_line)}</div>"
                 "</div>"
@@ -531,7 +599,7 @@ def _render_header(status_line: str) -> None:
             unsafe_allow_html=True,
         )
     with header_cols[1]:
-        st.markdown("<div class='qa-header-dock'>", unsafe_allow_html=True)
+        st.markdown("<div class='qa-header-dock qa-clear-wrap'>", unsafe_allow_html=True)
         st.button(
             "Clear",
             key="clear-conversation-button",
@@ -540,52 +608,50 @@ def _render_header(status_line: str) -> None:
             on_click=_clear_conversation,
         )
         st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_conversation(conversation_history: list[dict[str, object]]) -> None:
-    st.markdown("<div class='qa-conversation-shell'>", unsafe_allow_html=True)
-    if conversation_history:
-        for turn in conversation_history:
-            _render_user_message(str(turn["question"]))
-            _render_assistant_message(turn["response"])
+    st.markdown("<div class='qa-chat-shell'>", unsafe_allow_html=True)
+    for turn in conversation_history:
+        _render_user_message(str(turn["question"]))
+        _render_assistant_message(turn["response"])
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_composer(prompt_chips: list[str], answer_service: AnswerService) -> None:
-    st.markdown("<div class='qa-composer-anchor'></div>", unsafe_allow_html=True)
-    st.markdown("<div class='qa-composer-dock'><div class='qa-composer-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='qa-fixed-composer-anchor'></div>", unsafe_allow_html=True)
+    st.markdown("<div class='qa-composer-shell qa-composer-dock'>", unsafe_allow_html=True)
+    st.markdown("<div class='qa-input-wrap'>", unsafe_allow_html=True)
     st.text_area(
         "Message QuestAI",
         key=QUESTION_INPUT_KEY,
-        height=118,
-        placeholder=(
-            "Ask about policy guidance, customer data, or a cautious combined question.\n\n"
-            "For example: Based on the policy and customer data, does Maple Works Mock Ltd "
-            "appear to meet the FlexLine Demo criteria?"
-        ),
+        height=76,
+        placeholder="Ask about policy guidance, customer data, or a cautious combined question.",
         label_visibility="collapsed",
     )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    if prompt_chips:
-        st.markdown("<div class='qa-chip-note'>Suggested prompts</div>", unsafe_allow_html=True)
-        chip_columns = st.columns(len(prompt_chips), gap="small")
-        for index, prompt in enumerate(prompt_chips):
-            with chip_columns[index]:
-                st.button(
-                    prompt,
-                    key=f"prompt-chip-{index}",
-                    use_container_width=True,
-                    on_click=_set_question,
-                    args=(prompt,),
-                )
-
-    composer_cols = st.columns([12, 1], gap="small")
-    with composer_cols[0]:
+    st.markdown("<div class='qa-composer-bottom'>", unsafe_allow_html=True)
+    bottom_cols = st.columns([10, 2], gap="small")
+    with bottom_cols[0]:
+        if prompt_chips:
+            st.markdown("<div class='qa-chip-note'>Suggested prompts</div>", unsafe_allow_html=True)
+            chip_columns = st.columns(len(prompt_chips), gap="small")
+            for index, prompt in enumerate(prompt_chips):
+                with chip_columns[index]:
+                    st.button(
+                        prompt,
+                        key=f"prompt-chip-{index}",
+                        use_container_width=True,
+                        on_click=_set_question,
+                        args=(prompt,),
+                    )
         st.markdown(
             "<div class='qa-composer-help'>Recent conversation context is passed in lightly for follow-up questions.</div>",
             unsafe_allow_html=True,
         )
-    with composer_cols[1]:
+    with bottom_cols[1]:
         st.button(
             ">",
             key="send-question",
@@ -594,7 +660,8 @@ def _render_composer(prompt_chips: list[str], answer_service: AnswerService) -> 
             on_click=_submit_question,
             args=(answer_service,),
         )
-    st.markdown("</div></div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def run_app() -> None:
@@ -636,10 +703,14 @@ def run_app() -> None:
     document_load_issues = retrieval_bundle.issues
     chunks = chunker.chunk_documents(retrieval_documents)
     dataset_info = customer_data_loader.get_data_info()
-    markdown_count = sum(1 for document in retrieval_documents if document.source_type == "markdown")
+    markdown_count = sum(
+        1 for document in retrieval_documents if document.source_type == "markdown"
+    )
     text_count = sum(1 for document in retrieval_documents if document.source_type == "text")
     pdf_count = sum(1 for document in retrieval_documents if document.source_type == "pdf")
-    skipped_pdf_issues = [issue for issue in document_load_issues if issue.source_type == "pdf"]
+    skipped_pdf_issues = [
+        issue for issue in document_load_issues if issue.source_type == "pdf"
+    ]
 
     st.set_page_config(page_title="QuestAI", layout="centered")
     _ensure_session_state()
@@ -659,7 +730,6 @@ def run_app() -> None:
         f"CSV: {dataset_info.file_name if dataset_info.dataset_found and dataset_info.file_name else 'Not loaded'}"
     )
     _render_header(status_line)
-    st.markdown("<div class='qa-top-spacer'></div>", unsafe_allow_html=True)
 
     if synthesis_status_code != "success":
         st.markdown("<div class='qa-status-note'>", unsafe_allow_html=True)
@@ -674,6 +744,5 @@ def run_app() -> None:
         st.markdown("</div>", unsafe_allow_html=True)
 
     _render_conversation(conversation_history)
-    st.markdown("<div class='qa-bottom-spacer'></div>", unsafe_allow_html=True)
     prompt_chips = _build_dynamic_prompt_chips(conversation_history, config)
     _render_composer(prompt_chips, answer_service)

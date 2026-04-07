@@ -25,7 +25,11 @@ class StaticPlanner:
     def __init__(self, planning_result: SemanticPlanningResult) -> None:
         self.planning_result = planning_result
 
-    def plan(self, question: str) -> SemanticPlanningResult:
+    def plan(
+        self,
+        question: str,
+        conversation_context: str | None = None,
+    ) -> SemanticPlanningResult:
         return self.planning_result
 
 
