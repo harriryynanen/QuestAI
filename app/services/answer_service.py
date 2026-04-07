@@ -40,9 +40,17 @@ class AnswerService:
         self.structured_query_planner = structured_query_planner
         self.retrieval_context_max_characters = retrieval_context_max_characters
 
-    def answer_question(self, question: str) -> AnswerResponse:
-        planning_result = self.structured_query_planner.plan(question)
-        routing_decision = self._route_question(question, planning_result)
+    def answer_question(
+        self,
+        question: str,
+        conversation_context: str | None = None,
+    ) -> AnswerResponse:
+        contextual_question = self._build_contextual_question(
+            question=question,
+            conversation_context=conversation_context,
+        )
+        planning_result = self.structured_query_planner.plan(contextual_question)
+        routing_decision = self._route_question(contextual_question, planning_result)
         route = routing_decision.route
         dataset_info = self.customer_data_loader.get_data_info()
         dataframe = self.customer_data_loader.get_dataframe()
@@ -55,12 +63,12 @@ class AnswerService:
             return self._build_unclear_routing_response(routing_decision)
 
         if route == "retrieval":
-            retrieved_chunks = self.retriever.retrieve(question=question, chunks=chunks)
-            return self._build_retrieval_response(question, retrieved_chunks, routing_decision)
+            retrieved_chunks = self.retriever.retrieve(question=contextual_question, chunks=chunks)
+            return self._build_retrieval_response(contextual_question, retrieved_chunks, routing_decision)
 
         if route == "structured":
             structured_result = self.structured_query_engine.answer(
-                question=question,
+                question=contextual_question,
                 dataframe=dataframe,
                 dataset_file_name=dataset_file_name,
                 plan=semantic_plan,
@@ -97,7 +105,7 @@ class AnswerService:
             )
 
         return self._build_combined_response(
-            question=question,
+            question=contextual_question,
             routing_decision=routing_decision,
             planning_result=planning_result,
             semantic_plan=semantic_plan,
@@ -566,6 +574,19 @@ class AnswerService:
         if structured_evidence.missing_information and proposed == "high":
             return "medium"
         return proposed
+
+    def _build_contextual_question(
+        self,
+        question: str,
+        conversation_context: str | None,
+    ) -> str:
+        if not conversation_context:
+            return question
+        return (
+            "Recent conversation context:\n"
+            f"{conversation_context}\n\n"
+            f"Current user question: {question}"
+        )
 
     def _build_unclear_routing_response(
         self,
