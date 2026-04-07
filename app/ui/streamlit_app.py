@@ -46,7 +46,7 @@ def _inject_styles() -> None:
 
         .block-container {
             max-width: var(--qa-content-width);
-            padding-top: calc(var(--qa-header-height) + 1.8rem);
+            padding-top: calc(var(--qa-header-height) + 0.95rem);
             padding-bottom: calc(var(--qa-composer-height) + 1.8rem);
         }
 
@@ -124,7 +124,7 @@ def _inject_styles() -> None:
         }
 
         .qa-chat-region {
-            padding-top: 1.65rem;
+            padding-top: 0.55rem;
             padding-bottom: 0.65rem;
         }
 
@@ -171,7 +171,7 @@ def _inject_styles() -> None:
         .qa-assistant-message {
             display: flex;
             align-items: flex-start;
-            gap: 0.8rem;
+            gap: 1rem;
             width: 100%;
         }
 
@@ -290,10 +290,11 @@ def _inject_styles() -> None:
         }
 
         .qa-input-wrap {
-            background: transparent;
+            background: #ffffff;
             border: 0;
             padding: 0;
             box-shadow: none;
+            border-radius: 18px;
         }
 
         .qa-chip-note {
@@ -325,11 +326,16 @@ def _inject_styles() -> None:
             padding: 0.55rem 0.7rem !important;
         }
 
+        div[data-baseweb="textarea"] {
+            background: #ffffff !important;
+            border-radius: 16px !important;
+        }
+
         div[data-testid="stTextArea"] textarea {
             border: 0 !important;
             outline: none !important;
             box-shadow: none !important;
-            background: transparent !important;
+            background: #ffffff !important;
             color: var(--qa-text) !important;
             min-height: 44px !important;
             max-height: 92px !important;
