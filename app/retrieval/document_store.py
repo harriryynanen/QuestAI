@@ -6,9 +6,10 @@ from models import DocumentInfo, DocumentLoadIssue, DocumentLoadResult, Document
 
 
 class DocumentStore:
-    DISCOVERABLE_EXTENSIONS = (".md", ".pdf")
-    RETRIEVAL_EXTENSIONS = (".md", ".pdf")
+    DISCOVERABLE_EXTENSIONS = (".md", ".txt", ".pdf")
+    RETRIEVAL_EXTENSIONS = (".md", ".txt", ".pdf")
     MARKDOWN_EXTENSION = ".md"
+    TEXT_EXTENSION = ".txt"
     PDF_EXTENSION = ".pdf"
 
     def __init__(self, docs_path: Path, pdf_min_text_characters: int = 40) -> None:
@@ -55,7 +56,7 @@ class DocumentStore:
             if not path.is_file() or path.suffix.lower() != self.MARKDOWN_EXTENSION:
                 continue
 
-            text = self._read_markdown_text(path)
+            text = self._read_plain_text(path)
             if text is None:
                 continue
 
@@ -83,15 +84,15 @@ class DocumentStore:
             if not path.is_file() or path.suffix.lower() not in self.RETRIEVAL_EXTENSIONS:
                 continue
 
-            if path.suffix.lower() == self.MARKDOWN_EXTENSION:
-                text = self._read_markdown_text(path)
+            if path.suffix.lower() in {self.MARKDOWN_EXTENSION, self.TEXT_EXTENSION}:
+                text = self._read_plain_text(path)
                 if text is None:
                     issues.append(
                         DocumentLoadIssue(
                             file_name=path.name,
                             path=path,
-                            reason="Markdown file could not be read.",
-                            source_type="markdown",
+                            reason=f"{self._source_type_for_extension(path.suffix.lower()).title()} file could not be read.",
+                            source_type=self._source_type_for_extension(path.suffix.lower()) or "text",
                         )
                     )
                     continue
@@ -102,7 +103,7 @@ class DocumentStore:
                         file_name=path.name,
                         path=path,
                         text=text,
-                        source_type="markdown",
+                        source_type=self._source_type_for_extension(path.suffix.lower()) or "text",
                     )
                 )
                 continue
@@ -143,7 +144,7 @@ class DocumentStore:
 
         return documents, issues
 
-    def _read_markdown_text(self, path: Path) -> str | None:
+    def _read_plain_text(self, path: Path) -> str | None:
         try:
             return path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
@@ -176,6 +177,8 @@ class DocumentStore:
     def _source_type_for_extension(self, extension: str) -> str | None:
         if extension == self.MARKDOWN_EXTENSION:
             return "markdown"
+        if extension == self.TEXT_EXTENSION:
+            return "text"
         if extension == self.PDF_EXTENSION:
             return "pdf"
         return None

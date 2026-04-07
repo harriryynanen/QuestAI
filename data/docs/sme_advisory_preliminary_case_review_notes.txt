@@ -1,0 +1,100 @@
+SME ADVISORY – PRELIMINARY CASE REVIEW NOTES
+Fictional internal sample material for demonstration use only.
+This file is synthetic and does not describe any real institution, customer, product, or policy.
+
+Document owner: SME Advisory Support
+Document type: Internal working note
+Review cycle: Quarterly
+Audience: Relationship managers and advisory specialists
+
+1. Purpose
+This note supports early-stage review of small and medium-sized business customer cases.
+It is intended to help staff form a consistent preliminary view before a case is escalated for deeper review.
+It is not an approval document and it must not be treated as a final credit, risk, or product decision.
+
+2. Typical use of this note
+This note may be used when a relationship manager needs to:
+- compare a customer situation against basic product purpose
+- identify obvious gaps in the available information
+- recognise whether a case appears straightforward, borderline, or incomplete
+- explain internally why a case may need escalation
+
+3. Product purpose reminders
+FlexLine Demo is generally discussed in short-term working capital situations.
+Typical examples include seasonal inventory pressure, supplier prepayments, or timing gaps between outgoing costs and incoming customer payments.
+
+InvoiceBridge Demo is generally discussed when the customer has a visible business-to-business invoicing pattern and a financing need linked to receivables timing.
+
+AssetGrow Demo is generally discussed when the customer has an identifiable equipment, machinery, or operational investment need.
+
+4. Preliminary fit observations
+A preliminary fit view should remain cautious and evidence-based.
+Even when a case looks commercially attractive, staff should avoid positive wording if key supporting facts are missing.
+
+Indicators that usually support a more positive preliminary view include:
+- sufficient operating history
+- latest financial statements available
+- no unresolved tax arrears visible in the sample data
+- business profile that matches product purpose
+- balance sheet and profitability indicators that do not immediately raise concern
+
+Indicators that usually weaken support include:
+- repeated payment delays
+- weak equity ratio
+- unusually high leverage relative to EBITDA
+- missing financial statements
+- product request that does not clearly match the stated business need
+
+5. Incomplete-information handling
+If key facts are missing, the case should not be described as clearly aligned.
+Instead, the note should identify what is missing.
+
+Examples of missing information that commonly limit a preliminary view:
+- latest financial statements
+- confirmed financing purpose
+- current debt detail
+- invoicing mix information for receivables-based discussion
+- evidence about concentration risk
+
+Recommended wording:
+The available internal sample material does not provide enough information for a confident preliminary view. Additional customer or case information is required.
+
+6. Escalation situations
+Escalation should be considered when:
+- repeated payment delays are present
+- unresolved tax arrears are visible
+- leverage appears elevated
+- one customer appears to represent a large share of revenue
+- profitability is weak relative to the requested use case
+- important case facts are missing or inconsistent
+
+7. Notes on customer examples in the sample data
+These examples are synthetic and should be treated only as fictional demo cases.
+
+North Harbor Test Oy:
+Generally looks like a plausible working-capital discussion case due to recurring business activity and established operating history.
+
+Aurora Mock Services Oy:
+May appear weaker for a confident positive preliminary view because balance sheet strength is limited even though invoicing profile looks stable.
+
+Riverstone Demo Logistics Ltd:
+Commercial scale is visible, but repeated payment delays should lead to caution and likely escalation.
+
+Bright Forge Test Ltd:
+Strong revenue and acceptable profitability do not remove the tax arrears concern. A confident positive view would not be appropriate while that issue remains unresolved.
+
+Harbor Foods Demo Oy:
+Often serves as a useful example of a receivables-financing discussion because the B2B invoicing share is high and invoice cycle logic is easy to explain.
+
+Maple Works Mock Ltd:
+Illustrates a common incomplete-information scenario because the latest financial statements are not available in the sample data.
+
+8. Recording guidance
+Internal notes should separate:
+- facts observed from structured customer data
+- statements supported by internal product or policy documents
+- assumptions or unknowns that still require clarification
+
+9. Final reminder
+This file is a fictional internal working note prepared for demonstration purposes.
+It should be used only as safe synthetic sample material in a lightweight business Q&A assistant project.

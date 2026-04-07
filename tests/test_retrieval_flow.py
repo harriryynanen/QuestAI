@@ -123,3 +123,50 @@ def test_retrieval_flow_can_cite_pdf_sources(
     assert response.route == "retrieval"
     assert response.sources_used
     assert any("policy.pdf" in source for source in response.sources_used)
+
+
+def test_retrieval_flow_can_cite_text_sources(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="retrieval",
+            operation="policy_lookup",
+            document_topic="tax arrears",
+            needs_documents=True,
+            confidence="high",
+            reason="The question asks for document guidance.",
+        )
+    )
+    retrieval_result = RetrievalSynthesisResult(
+        answer="The text guidance notes that unresolved tax arrears should be escalated.",
+        support_level="high",
+        limitations="This answer is grounded only in retrieved document passages.",
+        synthesis_method="llm",
+        status="success",
+        failure_reason=None,
+    )
+    service = answer_service_factory(
+        planning_result=planning_result,
+        retrieval_result=retrieval_result,
+    )
+    service.document_store.load_retrieval_bundle = lambda: DocumentLoadResult(
+        documents=[
+            DocumentRecord(
+                document_id="policy_text",
+                file_name="policy.txt",
+                path=Path("policy.txt"),
+                text="Unresolved tax arrears should be escalated.",
+                source_type="text",
+            )
+        ],
+        issues=[],
+    )
+
+    response = service.answer_question("What does the policy say about tax arrears?")
+
+    assert response.route == "retrieval"
+    assert response.sources_used
+    assert any("policy.txt" in source for source in response.sources_used)

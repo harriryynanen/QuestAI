@@ -69,6 +69,7 @@ def run_app() -> None:
     chunks = chunker.chunk_documents(retrieval_documents)
     dataset_info = customer_data_loader.get_data_info()
     markdown_count = sum(1 for document in retrieval_documents if document.source_type == "markdown")
+    text_count = sum(1 for document in retrieval_documents if document.source_type == "text")
     pdf_count = sum(1 for document in retrieval_documents if document.source_type == "pdf")
     skipped_pdf_issues = [issue for issue in document_load_issues if issue.source_type == "pdf"]
 
@@ -87,6 +88,7 @@ def run_app() -> None:
             f"Retrieval synthesis: {retrieval_status} | "
             f"Model: {config.openai_model} | "
             f"Markdown docs: {markdown_count} | "
+            f"Text docs: {text_count} | "
             f"PDF docs: {pdf_count} | "
             f"Chunks: {len(chunks)} | "
             f"CSV: {dataset_info.file_name if dataset_info.dataset_found and dataset_info.file_name else 'Not loaded'}"

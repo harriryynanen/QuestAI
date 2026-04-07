@@ -107,8 +107,6 @@ def test_list_documents_matches_mvp_supported_types(workspace_tmp_dir):
     markdown_path.write_text("# Policy\nPolicy text.\n", encoding="utf-8")
     pdf_path = workspace_tmp_dir / "notes.pdf"
     pdf_path.write_bytes(b"%PDF-test")
-    txt_path = workspace_tmp_dir / "legacy.txt"
-    txt_path.write_text("Legacy text", encoding="utf-8")
 
     store = DocumentStore(workspace_tmp_dir)
     listed_extensions = {document.extension for document in store.list_documents()}
