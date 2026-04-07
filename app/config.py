@@ -22,10 +22,10 @@ class AppConfig:
     llm_enabled_for_retrieval: bool = True
     openai_api_key: str | None = None
     openai_model: str = "gpt-5.4-mini"
-    app_title: str = "Business Q&A Assistant"
+    app_title: str = "QuestAI"
     app_description: str = (
         "Ask a question about a fictional business banking advisory scenario. "
-        "This demo uses markdown retrieval with OpenAI synthesis and deterministic CSV querying."
+        "This demo uses grounded document retrieval, deterministic CSV querying, and cautious evidence synthesis."
     )
     example_questions: tuple[str, ...] = (
         "What does the policy say about tax arrears?",

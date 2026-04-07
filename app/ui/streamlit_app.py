@@ -174,6 +174,7 @@ def _inject_styles() -> None:
             align-items: flex-start;
             gap: 1rem;
             width: 100%;
+            padding: 0.3rem 0;
         }
 
         .qa-avatar {
@@ -249,17 +250,6 @@ def _inject_styles() -> None:
             color: #4e5a72;
             font-size: 0.8rem;
             font-weight: 600;
-        }
-
-        .qa-source-preview {
-            color: var(--qa-muted);
-            font-size: 0.82rem;
-            line-height: 1.45;
-            margin-bottom: 0.75rem;
-        }
-
-        .qa-source-line {
-            margin: 0.12rem 0;
         }
 
         .qa-badge-row {
@@ -359,7 +349,7 @@ def _inject_styles() -> None:
             height: 42px !important;
             padding: 0 !important;
             border-radius: 999px !important;
-            font-size: 12pxrem !important;
+            font-size: 1rem !important;
             background: var(--qa-accent) !important;
             border: 0 !important;
             box-shadow: none !important;
@@ -465,18 +455,18 @@ def _submit_question(answer_service: AnswerService) -> None:
     st.session_state[QUESTION_INPUT_KEY] = ""
 
 
-def _format_source_label(source: str) -> str:
+def _format_source_reference(source: str) -> str:
     if " | row:" in source:
         return source
     return source.replace(" -- ", " - ")
 
 
-def _deduplicate_display_sources(sources_used: list[str]) -> list[str]:
-    deduped: list[str] = []
+def _build_visible_source_references(sources_used: list[str]) -> list[str]:
+    visible_sources: list[str] = []
     seen: set[str] = set()
 
     for source in sources_used:
-        display_source = _format_source_label(source)
+        display_source = _format_source_reference(source)
         if " | row:" in source:
             file_name, _, rest = source.partition(" | row: ")
             row_name = rest.split(" | ", maxsplit=1)[0].strip()
@@ -502,9 +492,9 @@ def _deduplicate_display_sources(sources_used: list[str]) -> list[str]:
 
         if display_source not in seen:
             seen.add(display_source)
-            deduped.append(display_source)
+            visible_sources.append(display_source)
 
-    return deduped
+    return visible_sources
 
 
 def _render_badges(response) -> None:
@@ -534,18 +524,10 @@ def _render_user_message(question: str) -> None:
 
 
 def _render_answer_card(response) -> None:
-    display_sources = _deduplicate_display_sources(response.sources_used)
+    display_sources = _build_visible_source_references(response.sources_used)
     citation_markers = " ".join(
         f"<span class='qa-citation'>[{index}]</span>"
         for index, _ in enumerate(display_sources, start=1)
-    )
-    source_preview = display_sources[:3]
-    preview_html = "".join(
-        (
-            f"<div class='qa-source-line'><strong>[{index}]</strong> "
-            f"{html.escape(source)}</div>"
-        )
-        for index, source in enumerate(source_preview, start=1)
     )
     st.markdown(
         (
@@ -553,7 +535,6 @@ def _render_answer_card(response) -> None:
             "<div class='qa-answer-label'>Answer</div>"
             f"<div class='qa-answer-text'>{html.escape(response.answer)}</div>"
             f"<div class='qa-citations'>{citation_markers}</div>"
-            f"<div class='qa-source-preview'>{preview_html}</div>"
             "</div>"
         ),
         unsafe_allow_html=True,
@@ -582,7 +563,7 @@ def _render_answer_details(response) -> None:
         st.markdown("**Sources Used**")
         if response.sources_used:
             for index, source in enumerate(response.sources_used, start=1):
-                st.write(f"[{index}] {_format_source_label(source)}")
+                st.write(f"[{index}] {_format_source_reference(source)}")
         else:
             st.write("No sources were used for this answer.")
 

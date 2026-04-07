@@ -147,7 +147,11 @@ def structured_query_engine():
 @pytest.fixture
 def markdown_documents(app_config):
     store = DocumentStore(app_config.docs_path)
-    return store.load_markdown_documents()
+    return [
+        document
+        for document in store.load_retrieval_bundle().documents
+        if document.source_type == "markdown"
+    ]
 
 
 @pytest.fixture

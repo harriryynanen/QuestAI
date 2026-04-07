@@ -10,7 +10,7 @@ The demonstration context is a **fictional business banking advisory scenario**.
 
 QuestAI is a lightweight Streamlit-based Business Q&A Assistant built for a recruitment assignment. It answers questions against a constrained set of fictional internal sources:
 
-- markdown documents representing internal guidance
+- text-based documents representing internal guidance
 - one structured CSV dataset representing customer facts
 
 The goal is not to simulate a production banking decision engine. The goal is to demonstrate clear scoping, grounded reasoning, uncertainty handling, and an extensible structure.
@@ -47,7 +47,7 @@ The planner does not execute tools directly.
 Execution remains separated by source type:
 
 - `retrieval`:
-  - load markdown documents
+  - load text-based documents (`.md`, `.txt`, text-based `.pdf`)
   - split into chunks
   - retrieve top chunks with deterministic scoring
 - `structured`:
@@ -69,7 +69,7 @@ This preserves the principle that LLMs interpret and summarize, while the applic
 
 ### 3.1 Unstructured Source
 
-Markdown files in `data/docs/` act as synthetic internal guidance. These are used for:
+Text-based files in `data/docs/` act as synthetic internal guidance. These are used for:
 
 - policy questions
 - product guidance questions

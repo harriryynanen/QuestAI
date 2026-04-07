@@ -47,31 +47,6 @@ class DocumentStore:
         documents, issues = self._load_retrieval_documents_with_issues()
         return DocumentLoadResult(documents=documents, issues=issues)
 
-    def load_markdown_documents(self) -> list[DocumentRecord]:
-        if not self.docs_path.exists() or not self.docs_path.is_dir():
-            return []
-
-        documents: list[DocumentRecord] = []
-        for path in sorted(self.docs_path.iterdir()):
-            if not path.is_file() or path.suffix.lower() != self.MARKDOWN_EXTENSION:
-                continue
-
-            text = self._read_plain_text(path)
-            if text is None:
-                continue
-
-            documents.append(
-                DocumentRecord(
-                    document_id=path.stem,
-                    file_name=path.name,
-                    path=path,
-                    text=text,
-                    source_type="markdown",
-                )
-            )
-
-        return documents
-
     def _load_retrieval_documents_with_issues(
         self,
     ) -> tuple[list[DocumentRecord], list[DocumentLoadIssue]]:

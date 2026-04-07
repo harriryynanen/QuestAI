@@ -45,14 +45,14 @@ The repository already includes demo source files:
 Supported file handling in the current version:
 
 - document discovery: `.md`, `.txt`, `.pdf`
-- retrieval content path: `.md` only
+- retrieval content path: `.md`, `.txt`, `.pdf` for text-based content
 - structured dataset loading: `.csv`
 
 ## Current Behavior
 
 - Questions are first interpreted through an LLM-based semantic planning layer.
 - If semantic planning is unavailable or unclear, a deterministic rule-based router remains as fallback.
-- Retrieval answers are synthesized only from retrieved markdown chunks.
+- Retrieval answers are synthesized only from retrieved document chunks selected by the app.
 - Structured answers are executed deterministically from CSV data after semantic planning.
 - Combined answers use a controlled evidence flow:
   - retrieve document evidence
