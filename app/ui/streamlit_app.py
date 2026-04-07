@@ -379,7 +379,7 @@ def _inject_styles() -> None:
             color: #44506a !important;
             border-radius: 999px !important;
             padding: 0.3rem 0.45rem !important;
-            font-size: 0.7rem !important;
+            font-size: 0.64rem !important;
             line-height: 1.2 !important;
             white-space: normal !important;
             text-align: center !important;
