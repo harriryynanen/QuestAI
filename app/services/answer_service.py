@@ -428,10 +428,15 @@ class AnswerService:
             document_evidence=document_evidence,
         )
         if llm_result.status == "success":
+            combined_support_level = self._cap_combined_support_level(
+                proposed=llm_result.support_level,
+                selected_chunks=selected_chunks,
+                structured_evidence=structured_evidence,
+            )
             return AnswerResponse(
                 answer=llm_result.answer,
                 sources_used=combined_sources,
-                support_level=llm_result.support_level,
+                support_level=combined_support_level,
                 limitations=llm_result.limitations,
                 route="combined",
                 retrieved_chunks=selected_chunks,
@@ -533,14 +538,34 @@ class AnswerService:
             "and structured customer facts. LLM synthesis was unavailable, so the app did not produce a "
             "single natural-language combined interpretation."
         )
+        support_level = self._cap_combined_support_level(
+            proposed="medium",
+            selected_chunks=selected_chunks,
+            structured_evidence=structured_evidence,
+        )
         return RetrievalSynthesisResult(
             answer=answer,
-            support_level="medium",
+            support_level=support_level,
             limitations=limitations,
             synthesis_method="fallback",
             status="success",
             failure_reason=None,
         )
+
+    def _cap_combined_support_level(
+        self,
+        proposed: str,
+        selected_chunks: list[RetrievedChunk],
+        structured_evidence: CombinedEvidence,
+    ) -> str:
+        has_structured_row_evidence = any(
+            "| row:" in source for source in structured_evidence.sources_used
+        )
+        if not selected_chunks or not has_structured_row_evidence:
+            return "low"
+        if structured_evidence.missing_information and proposed == "high":
+            return "medium"
+        return proposed
 
     def _build_unclear_routing_response(
         self,
