@@ -22,55 +22,88 @@ def _inject_styles() -> None:
     st.markdown(
         """
         <style>
+        .block-container {
+            max-width: 900px;
+            padding-top: 0.8rem;
+            padding-bottom: 6.75rem;
+        }
+        .qa-sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: rgba(249, 250, 251, 0.94);
+            backdrop-filter: blur(10px);
+            padding: 0.2rem 0 0.7rem 0;
+            border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+            margin-bottom: 0.8rem;
+        }
         .qa-header-row {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
             gap: 1rem;
-            margin-bottom: 0.3rem;
         }
         .qa-title {
-            font-size: 2rem;
+            font-size: 1.85rem;
             font-weight: 700;
+            letter-spacing: -0.03em;
             color: #111827;
-            letter-spacing: -0.02em;
+            margin: 0;
         }
         .qa-status-line {
             color: #5b6474;
-            font-size: 0.86rem;
-            line-height: 1.5;
-            margin-bottom: 1rem;
+            font-size: 0.83rem;
+            line-height: 1.45;
+            margin-top: 0.24rem;
         }
-        .qa-conversation {
-            margin-top: 0.6rem;
-            margin-bottom: 1.1rem;
+        .qa-conversation-shell {
+            min-height: 54vh;
+            padding: 0.15rem 0 0.5rem 0;
+        }
+        .qa-empty-state {
+            border: 1px dashed #d8e0ea;
+            background: #f8fafc;
+            border-radius: 18px;
+            padding: 1rem 1.1rem;
+            color: #526072;
+            margin-bottom: 1rem;
         }
         .qa-user-wrap {
             display: flex;
             justify-content: flex-end;
+            margin: 0.75rem 0;
+        }
+        .qa-user-message {
+            display: flex;
             align-items: flex-end;
-            gap: 0.55rem;
-            margin: 0.6rem 0;
+            gap: 0.6rem;
+            max-width: 82%;
+            justify-content: flex-end;
         }
         .qa-user-bubble {
-            max-width: 82%;
-            background: #eef1f5;
+            background: #eceff3;
             border: 1px solid #dbe1e8;
             border-radius: 18px 18px 6px 18px;
-            padding: 0.85rem 1rem;
-            color: #1f2937;
-            line-height: 1.6;
+            padding: 0.86rem 1rem;
+            color: #111827;
+            line-height: 1.58;
             white-space: pre-wrap;
         }
         .qa-assistant-wrap {
             display: flex;
+            justify-content: flex-start;
+            margin: 0.9rem 0 1.1rem 0;
+        }
+        .qa-assistant-message {
+            display: flex;
             align-items: flex-start;
-            gap: 0.7rem;
-            margin: 0.7rem 0 1rem 0;
+            gap: 0.75rem;
+            width: 100%;
         }
         .qa-assistant-main {
             flex: 1;
             min-width: 0;
+            max-width: 100%;
         }
         .qa-avatar {
             width: 2rem;
@@ -79,98 +112,112 @@ def _inject_styles() -> None:
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.86rem;
+            font-size: 0.78rem;
             font-weight: 700;
             flex-shrink: 0;
-        }
-        .qa-avatar-assistant {
-            background: #e8eef7;
-            color: #1f3b5b;
-            border: 1px solid #d3dfef;
         }
         .qa-avatar-user {
             background: #dfe4eb;
             color: #3f4957;
             border: 1px solid #cfd7e2;
         }
+        .qa-avatar-assistant {
+            background: #e8eef7;
+            color: #1f3b5b;
+            border: 1px solid #d3dfef;
+        }
         .qa-answer-card {
-            border: 1px solid rgba(49, 51, 63, 0.12);
-            border-radius: 16px;
-            padding: 1rem 1rem 0.95rem 1rem;
+            border: 1px solid rgba(49, 51, 63, 0.11);
+            border-radius: 18px;
             background: #ffffff;
+            padding: 1rem 1rem 0.9rem 1rem;
             box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
         }
-        .qa-answer-title {
-            font-size: 0.8rem;
+        .qa-answer-label {
+            font-size: 0.78rem;
             font-weight: 700;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.05em;
             text-transform: uppercase;
-            color: #657084;
+            color: #667085;
             margin-bottom: 0.5rem;
         }
         .qa-answer-text {
-            font-size: 1.03rem;
-            line-height: 1.74;
             color: #111827;
+            font-size: 1.02rem;
+            line-height: 1.8;
             white-space: pre-wrap;
         }
         .qa-citations {
-            margin-top: 0.65rem;
-            color: #5b6474;
-            font-size: 0.86rem;
+            margin-top: 0.75rem;
         }
         .qa-citation {
             display: inline-block;
-            margin-right: 0.35rem;
-            padding: 0.06rem 0.34rem;
-            border-radius: 6px;
+            margin: 0 0.32rem 0.32rem 0;
+            padding: 0.08rem 0.38rem;
+            border-radius: 7px;
             background: #f3f5f8;
             border: 1px solid #e2e7ef;
             color: #374151;
+            font-size: 0.83rem;
             font-weight: 600;
         }
-        .qa-source-summary {
-            margin-top: 0.65rem;
-            color: #4b5563;
-            font-size: 0.9rem;
+        .qa-source-preview {
+            margin-top: 0.55rem;
+            color: #596579;
+            font-size: 0.88rem;
         }
         .qa-source-line {
-            margin: 0.18rem 0;
+            margin: 0.16rem 0;
         }
         .qa-badge-row {
-            margin: 0.45rem 0 0.15rem 0;
+            margin-top: 0.7rem;
         }
         .qa-badge {
             display: inline-block;
-            padding: 0.2rem 0.55rem;
+            margin: 0 0.35rem 0.35rem 0;
+            padding: 0.18rem 0.58rem;
             border-radius: 999px;
-            background: #eef2f7;
             border: 1px solid #d7deea;
+            background: #eef2f7;
             color: #334155;
             font-size: 0.78rem;
-            margin: 0 0.35rem 0.35rem 0;
         }
-        .qa-composer-shell {
+        .qa-sticky-composer {
             position: sticky;
             bottom: 0;
-            background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,1) 30%);
+            z-index: 25;
+            background: linear-gradient(to top, rgba(249, 250, 251, 0.98), rgba(249, 250, 251, 0.94));
             padding-top: 0.65rem;
-            margin-top: 0.8rem;
         }
         .qa-composer-card {
-            border: 1px solid rgba(49, 51, 63, 0.12);
-            border-radius: 18px;
-            padding: 0.9rem 0.95rem 0.7rem 0.95rem;
-            background: #ffffff;
+            border-top: 1px solid rgba(17, 24, 39, 0.08);
+            padding-top: 0.8rem;
+            padding-bottom: 0.2rem;
         }
         .qa-chip-note {
             color: #6b7280;
-            font-size: 0.82rem;
-            margin-bottom: 0.4rem;
+            font-size: 0.8rem;
+            margin-bottom: 0.35rem;
+        }
+        .qa-composer-help {
+            color: #6b7280;
+            font-size: 0.79rem;
+            margin-top: 0.35rem;
         }
         div[data-testid="stTextArea"] textarea {
-            border-radius: 14px !important;
-            min-height: 120px !important;
+            border-radius: 18px !important;
+            min-height: 118px !important;
+        }
+        div[data-testid="stButton"] > button[kind="primary"] {
+            border-radius: 999px !important;
+            min-width: 2.7rem !important;
+            width: 2.7rem !important;
+            height: 2.7rem !important;
+            padding: 0 !important;
+            font-size: 1rem !important;
+        }
+        div[data-testid="stButton"] > button {
+            border-radius: 999px;
         }
         </style>
         """,
@@ -221,12 +268,7 @@ def _submit_question(answer_service: AnswerService) -> None:
         question=question,
         conversation_context=conversation_context,
     )
-    conversation_history.append(
-        {
-            "question": question,
-            "response": response,
-        }
-    )
+    conversation_history.append({"question": question, "response": response})
     st.session_state[QUESTION_INPUT_KEY] = ""
 
 
@@ -242,7 +284,7 @@ def _render_badges(response) -> None:
         f"Support: {response.support_level.title()}",
         f"Synthesis: {response.synthesis_method.replace('_', ' ').title()}",
     ]
-    badge_html = "".join(f"<span class='qa-badge'>{badge}</span>" for badge in badges)
+    badge_html = "".join(f"<span class='qa-badge'>{html.escape(badge)}</span>" for badge in badges)
     st.markdown(f"<div class='qa-badge-row'>{badge_html}</div>", unsafe_allow_html=True)
 
 
@@ -250,8 +292,10 @@ def _render_user_message(question: str) -> None:
     st.markdown(
         (
             "<div class='qa-user-wrap'>"
+            "<div class='qa-user-message'>"
             f"<div class='qa-user-bubble'>{html.escape(question)}</div>"
             "<div class='qa-avatar qa-avatar-user'>You</div>"
+            "</div>"
             "</div>"
         ),
         unsafe_allow_html=True,
@@ -265,16 +309,19 @@ def _render_answer_card(response) -> None:
     )
     source_preview = response.sources_used[:2]
     preview_html = "".join(
-        f"<div class='qa-source-line'><strong>[{index}]</strong> {html.escape(_format_source_label(source))}</div>"
+        (
+            f"<div class='qa-source-line'><strong>[{index}]</strong> "
+            f"{html.escape(_format_source_label(source))}</div>"
+        )
         for index, source in enumerate(source_preview, start=1)
     )
     st.markdown(
         (
             "<div class='qa-answer-card'>"
-            "<div class='qa-answer-title'>Answer</div>"
+            "<div class='qa-answer-label'>Answer</div>"
             f"<div class='qa-answer-text'>{html.escape(response.answer)}</div>"
             f"<div class='qa-citations'>{citation_markers}</div>"
-            f"<div class='qa-source-summary'>{preview_html}</div>"
+            f"<div class='qa-source-preview'>{preview_html}</div>"
             "</div>"
         ),
         unsafe_allow_html=True,
@@ -294,9 +341,7 @@ def _render_answer_details(response) -> None:
                 f"{response.routing_reason}"
             )
         if response.planning_reason:
-            st.caption(
-                f"Structured planning: {response.planning_method} - {response.planning_reason}"
-            )
+            st.caption(f"Structured planning: {response.planning_method} - {response.planning_reason}")
         if response.synthesis_status_message:
             st.caption(response.synthesis_status_message)
 
@@ -332,32 +377,176 @@ def _render_assistant_message(response) -> None:
     st.markdown(
         (
             "<div class='qa-assistant-wrap'>"
+            "<div class='qa-assistant-message'>"
             "<div class='qa-avatar qa-avatar-assistant'>Q</div>"
             "<div class='qa-assistant-main'>"
-            "</div>"
-            "</div>"
         ),
         unsafe_allow_html=True,
     )
     _render_answer_card(response)
     _render_badges(response)
     _render_answer_details(response)
+    st.markdown("</div></div></div>", unsafe_allow_html=True)
+
+
+def _extract_topic_prompts(question: str) -> list[str]:
+    normalized = question.lower()
+    prompt_map = [
+        ("tax arrears", "What does the policy say about tax arrears?"),
+        ("payment delays", "What does the policy say about payment delays?"),
+        ("financial statements", "Which customers are missing latest financial statements?"),
+        ("equity ratio", "What is Harbor Foods Demo Oy's equity ratio?"),
+        ("turnover", "Which customer has the highest turnover?"),
+        ("flexline", "What are the criteria for FlexLine Demo?"),
+        ("invoicebridge", "How does the guide describe InvoiceBridge Demo?"),
+    ]
+
+    prompts: list[str] = []
+    for pattern, prompt in prompt_map:
+        if pattern in normalized and prompt not in prompts:
+            prompts.append(prompt)
+    return prompts
+
+
+def _build_dynamic_prompt_chips(conversation_history: list[dict[str, object]], config) -> list[str]:
+    if not conversation_history:
+        return list(config.example_questions[:3])
+
+    last_turn = conversation_history[-1]
+    last_question = str(last_turn["question"])
+    last_response = last_turn["response"]
+
+    suggestions: list[str] = []
+    suggestions.extend(_extract_topic_prompts(last_question))
+    suggestions.extend(last_response.follow_up_questions)
+
+    if last_response.route == "retrieval":
+        suggestions.extend(
+            [
+                "What about payment delays?",
+                "What guidance is given about missing financial statements?",
+                "How does the guide describe this product?",
+            ]
+        )
+    elif last_response.route == "structured":
+        customer_name = last_response.matched_customer_name or "Harbor Foods Demo Oy"
+        suggestions.extend(
+            [
+                f"What is the debt to EBITDA of {customer_name}?",
+                f"Does {customer_name} have tax arrears?",
+                "Which customer has the highest turnover?",
+            ]
+        )
+    elif last_response.route == "combined":
+        customer_name = last_response.matched_customer_name or "Harbor Foods Demo Oy"
+        suggestions.extend(
+            [
+                "What does the policy say about payment delays?",
+                f"What is the equity ratio of {customer_name}?",
+                "What if turnover is weaker?",
+            ]
+        )
+    else:
+        suggestions.extend(config.example_questions)
+
+    deduped: list[str] = []
+    for suggestion in suggestions:
+        cleaned = suggestion.strip()
+        if cleaned and cleaned not in deduped:
+            deduped.append(cleaned)
+
+    return deduped[:3]
+
+
+def _render_header(status_line: str) -> None:
+    header_cols = st.columns([12, 2], gap="small")
+    with header_cols[0]:
+        st.markdown(
+            (
+                "<div class='qa-sticky-header'>"
+                "<div class='qa-header-row'>"
+                "<div>"
+                "<div class='qa-title'>QuestAI</div>"
+                f"<div class='qa-status-line'>{html.escape(status_line)}</div>"
+                "</div>"
+                "</div>"
+                "</div>"
+            ),
+            unsafe_allow_html=True,
+        )
+    with header_cols[1]:
+        st.markdown("<div class='qa-sticky-header'>", unsafe_allow_html=True)
+        st.button(
+            "Clear",
+            key="clear-conversation-button",
+            help="Start a fresh conversation",
+            use_container_width=True,
+            on_click=_clear_conversation,
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_conversation(conversation_history: list[dict[str, object]]) -> None:
-    st.markdown("<div class='qa-conversation'>", unsafe_allow_html=True)
-    for turn in conversation_history:
-        _render_user_message(str(turn["question"]))
-        _render_assistant_message(turn["response"])
+    st.markdown("<div class='qa-conversation-shell'>", unsafe_allow_html=True)
+    if not conversation_history:
+        st.markdown(
+            (
+                "<div class='qa-empty-state'>"
+                "Ask about policy guidance, customer data, or a cautious combined assessment."
+                "</div>"
+            ),
+            unsafe_allow_html=True,
+        )
+    else:
+        for turn in conversation_history:
+            _render_user_message(str(turn["question"]))
+            _render_assistant_message(turn["response"])
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-def _current_prompt_chips(conversation_history: list[dict[str, object]], config) -> list[str]:
-    if conversation_history:
-        last_response = conversation_history[-1]["response"]
-        if last_response.follow_up_questions:
-            return last_response.follow_up_questions[:3]
-    return list(config.example_questions[:3])
+def _render_composer(prompt_chips: list[str], answer_service: AnswerService) -> None:
+    st.markdown("<div class='qa-sticky-composer'><div class='qa-composer-card'>", unsafe_allow_html=True)
+    st.text_area(
+        "Message QuestAI",
+        key=QUESTION_INPUT_KEY,
+        height=118,
+        placeholder=(
+            "Ask about policy guidance, customer data, or a cautious combined question.\n\n"
+            "For example: Based on the policy and customer data, does Maple Works Mock Ltd "
+            "appear to meet the FlexLine Demo criteria?"
+        ),
+        label_visibility="collapsed",
+    )
+
+    if prompt_chips:
+        st.markdown("<div class='qa-chip-note'>Suggested prompts</div>", unsafe_allow_html=True)
+        chip_columns = st.columns(len(prompt_chips), gap="small")
+        for index, prompt in enumerate(prompt_chips):
+            with chip_columns[index]:
+                st.button(
+                    prompt,
+                    key=f"prompt-chip-{index}",
+                    use_container_width=True,
+                    on_click=_set_question,
+                    args=(prompt,),
+                )
+
+    composer_cols = st.columns([12, 1], gap="small")
+    with composer_cols[0]:
+        st.markdown(
+            "<div class='qa-composer-help'>Recent conversation context is passed in lightly for follow-up questions.</div>",
+            unsafe_allow_html=True,
+        )
+    with composer_cols[1]:
+        st.button(
+            ">",
+            key="send-question",
+            type="primary",
+            use_container_width=True,
+            on_click=_submit_question,
+            args=(answer_service,),
+        )
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def run_app() -> None:
@@ -393,6 +582,7 @@ def run_app() -> None:
         structured_query_planner=structured_query_planner,
         retrieval_context_max_characters=config.retrieval_context_max_characters,
     )
+
     retrieval_bundle = document_store.load_retrieval_bundle()
     retrieval_documents = retrieval_bundle.documents
     document_load_issues = retrieval_bundle.issues
@@ -411,12 +601,6 @@ def run_app() -> None:
     synthesis_status_code, synthesis_status_message = llm_client.get_status()
     retrieval_status = "OpenAI available" if llm_client.is_available() else "Fallback mode"
 
-    header_col, reset_col = st.columns([12, 1])
-    with header_col:
-        st.markdown("<div class='qa-title'>QuestAI</div>", unsafe_allow_html=True)
-    with reset_col:
-        st.button("↺", key="clear-conversation-icon", help="Clear conversation", on_click=_clear_conversation)
-
     status_line = (
         f"Retrieval synthesis: {retrieval_status} | "
         f"Model: {config.openai_model} | "
@@ -426,7 +610,8 @@ def run_app() -> None:
         f"Chunks: {len(chunks)} | "
         f"CSV: {dataset_info.file_name if dataset_info.dataset_found and dataset_info.file_name else 'Not loaded'}"
     )
-    st.markdown(f"<div class='qa-status-line'>{html.escape(status_line)}</div>", unsafe_allow_html=True)
+    _render_header(status_line)
+
     if synthesis_status_code != "success":
         st.caption(synthesis_status_message)
     if skipped_pdf_issues:
@@ -435,46 +620,6 @@ def run_app() -> None:
             + "; ".join(f"{issue.file_name} ({issue.reason})" for issue in skipped_pdf_issues)
         )
 
-    if conversation_history:
-        _render_conversation(conversation_history)
-    else:
-        st.info("Start by asking a question about the documents, customer data, or both.")
-
-    prompt_chips = _current_prompt_chips(conversation_history, config)
-    st.markdown("<div class='qa-composer-shell'>", unsafe_allow_html=True)
-    st.markdown("<div class='qa-composer-card'>", unsafe_allow_html=True)
-    st.text_area(
-        "Message QuestAI",
-        key=QUESTION_INPUT_KEY,
-        height=120,
-        placeholder=(
-            "Ask a policy question, a customer data question, or a cautious combined question.\n\n"
-            "For example: Based on the policy and customer data, does Maple Works Mock Ltd "
-            "appear to meet the FlexLine Demo criteria?"
-        ),
-        label_visibility="collapsed",
-    )
-    if prompt_chips:
-        st.markdown("<div class='qa-chip-note'>Try one of these prompts:</div>", unsafe_allow_html=True)
-        chip_columns = st.columns(len(prompt_chips))
-        for index, prompt in enumerate(prompt_chips):
-            with chip_columns[index]:
-                st.button(
-                    prompt,
-                    key=f"prompt-chip-{index}",
-                    use_container_width=True,
-                    on_click=_set_question,
-                    args=(prompt,),
-                )
-    composer_cols = st.columns([6, 1])
-    with composer_cols[1]:
-        st.button(
-            "➜",
-            key="send-question",
-            type="primary",
-            use_container_width=True,
-            on_click=_submit_question,
-            args=(answer_service,),
-        )
-    st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    _render_conversation(conversation_history)
+    prompt_chips = _build_dynamic_prompt_chips(conversation_history, config)
+    _render_composer(prompt_chips, answer_service)
