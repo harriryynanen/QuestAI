@@ -46,7 +46,7 @@ def _inject_styles() -> None:
 
         .block-container {
             max-width: var(--qa-content-width);
-            padding-top: calc(var(--qa-header-height) + 0.95rem);
+            padding-top: calc(var(--qa-header-height) + 0.35rem);
             padding-bottom: calc(var(--qa-composer-height) + 1.8rem);
         }
 
@@ -59,7 +59,7 @@ def _inject_styles() -> None:
         #qa-composer-anchor + div > div {
             pointer-events: auto;
             width: min(calc(100vw - 24px), var(--qa-content-width));
-            margin: 0 auto;
+            margin: 0 auto !important;
         }
 
         #qa-header-anchor + div {
@@ -83,17 +83,18 @@ def _inject_styles() -> None:
             background: linear-gradient(to top, rgba(246, 247, 251, 0.98), rgba(246, 247, 251, 0.93));
             backdrop-filter: blur(10px);
             border-top: 1px solid rgba(223, 227, 234, 0.85);
+            margin: 0 !important;
+            padding-bottom: 0 !important;
         }
 
         .qa-header-shell {
-            min-height: var(--qa-header-height);
-            display: flex;
-            align-items: center;
+            min-height: 0;
+            padding: 0.15rem 0 0.35rem 0;
         }
 
         .qa-header-row {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
             gap: 1rem;
             width: 100%;
@@ -278,7 +279,8 @@ def _inject_styles() -> None:
         }
 
         .qa-composer-shell {
-            padding: 0.55rem 0 0.65rem 0;
+            padding: 0.45rem 0 0 0;
+            margin-bottom: 0;
         }
 
         .qa-composer-row {
@@ -312,6 +314,7 @@ def _inject_styles() -> None:
             font-size: 0.72rem;
             line-height: 1.35;
             margin-top: 0.18rem;
+            margin-bottom: 0;
         }
 
         div[data-testid="stTextArea"] {
@@ -379,7 +382,7 @@ def _inject_styles() -> None:
             color: #44506a !important;
             border-radius: 999px !important;
             padding: 0.3rem 0.45rem !important;
-            font-size: 0.64rem !important;
+            font-size: 12px !important;
             line-height: 1.2 !important;
             white-space: normal !important;
             text-align: center !important;
