@@ -8,6 +8,11 @@ from collections import Counter
 from dataclasses import dataclass
 
 from models import DocumentChunk
+from retrieval.corpus_metadata import (
+    DEMO_GENERAL_POLICY_HEADINGS,
+    DEMO_KNOWN_PHRASES,
+    DEMO_PRODUCT_TERMS,
+)
 
 
 @dataclass(frozen=True)
@@ -45,7 +50,7 @@ class CorpusProfile:
 class RetrievalScoringHelper:
     """Explainable local retrieval scoring with BM25-style term weighting."""
 
-    PRODUCT_TERMS = {"flexline", "invoicebridge", "assetgrow"}
+    PRODUCT_TERMS = DEMO_PRODUCT_TERMS
     GENERIC_PRODUCT_TERMS = {"product", "products", "service", "services", "offering", "offerings"}
     ALTERNATIVE_PRODUCT_TERMS = {"alternative", "alternatives", "other", "besides"}
     POLICY_TERMS = {"policy", "criteria", "eligibility", "guide", "guideline", "instruction"}
@@ -100,26 +105,8 @@ class RetrievalScoringHelper:
     REFERENCED_PRODUCT_SECTION_PENALTY = 4.0
     PRODUCT_SPECIFIC_PENALTY = 1.0
     MIN_SCORE = 1.25
-    KNOWN_PHRASES = [
-        "tax arrears",
-        "unresolved tax arrears",
-        "payment delays",
-        "missing financial statements",
-        "financial statements",
-        "equity ratio",
-        "debt to ebitda",
-        "invoicebridge demo",
-        "flexline demo",
-        "assetgrow demo",
-    ]
-    GENERAL_POLICY_HEADINGS = {
-        "general exclusions",
-        "advisor reminder",
-        "missing-information rules",
-        "escalation flags",
-        "response framing",
-        "example 2: tax arrears",
-    }
+    KNOWN_PHRASES = DEMO_KNOWN_PHRASES
+    GENERAL_POLICY_HEADINGS = DEMO_GENERAL_POLICY_HEADINGS
 
     @classmethod
     def build_query_profile(cls, question: str) -> QueryProfile:

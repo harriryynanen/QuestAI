@@ -113,6 +113,26 @@ def test_advisory_case_next_action_lookup_is_supported(
     assert result.matched_field_name == "next_action"
 
 
+def test_advisory_case_distinct_requested_product_listing_is_supported(
+    structured_query_engine,
+    advisory_dataframe,
+    advisory_dataset_file_name,
+):
+    result = structured_query_engine.answer(
+        question="What products are in the advisory case data?",
+        dataframe=advisory_dataframe,
+        dataset_file_name=advisory_dataset_file_name,
+        plan=None,
+        dataset_name="advisory_case_pipeline",
+    )
+
+    assert result.support_level == "high"
+    assert "AssetGrow Demo" in result.answer
+    assert "FlexLine Demo" in result.answer
+    assert "InvoiceBridge Demo" in result.answer
+    assert result.matched_field_name == "requested_product"
+
+
 def test_answer_service_routes_advisory_case_questions_to_structured(
     answer_service_factory,
     plan_factory,
@@ -160,6 +180,34 @@ def test_answer_service_can_infer_advisory_dataset_from_planned_field(
     assert response.support_level == "high"
     assert "Mika Salonen" in response.answer
     assert response.matched_field_name == "advisory_owner"
+
+
+def test_answer_service_can_list_distinct_advisory_products_from_semantic_plan(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="structured",
+            operation="list",
+            field_name="requested_product",
+            needs_structured_data=True,
+            confidence="high",
+            reason="Planner mapped the question to a distinct advisory product listing.",
+            structured_dataset="advisory_case_pipeline",
+        )
+    )
+    service = answer_service_factory(planning_result=planning_result)
+
+    response = service.answer_question("What products are in the data?")
+
+    assert response.route == "structured"
+    assert response.support_level == "high"
+    assert "AssetGrow Demo" in response.answer
+    assert "FlexLine Demo" in response.answer
+    assert "InvoiceBridge Demo" in response.answer
+    assert response.matched_field_name == "requested_product"
 
 
 def test_answer_service_prefers_field_owned_dataset_over_conflicting_planned_dataset(

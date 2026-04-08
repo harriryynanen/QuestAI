@@ -164,6 +164,14 @@ class AdvisoryCaseQueryHandler:
                 planning_reason=plan.reason,
             )
 
+        if plan.operation == "list" and plan.field_name == "requested_product":
+            return self._build_distinct_product_list_result(
+                dataframe=dataframe,
+                dataset_file_name=dataset_file_name,
+                planning_method=plan.method,
+                planning_reason=plan.reason,
+            )
+
         return None
 
     def _answer_with_heuristics(
@@ -175,6 +183,14 @@ class AdvisoryCaseQueryHandler:
         normalized = self._normalize_text(question)
         field_name = self._match_field(question)
         customer_match = self._match_customer(question, dataframe)
+
+        list_result = self._try_list_question(
+            question=normalized,
+            dataframe=dataframe,
+            dataset_file_name=dataset_file_name,
+        )
+        if list_result is not None:
+            return list_result
 
         count_result = self._try_count_question(
             question=normalized,
@@ -246,12 +262,40 @@ class AdvisoryCaseQueryHandler:
             answer="I could not map this advisory case question to a supported deterministic query pattern.",
             sources_used=[dataset_file_name],
             support_level="low",
-            limitations="This step currently supports case owner lookups, next actions, simple case filters, and open-case counts by product.",
+            limitations="This step currently supports case owner lookups, next actions, simple case filters, open-case counts by product, and distinct product listings.",
             matched_customer_name=None,
             matched_customer_names=None,
             matched_field_name=field_name,
             planning_method="heuristic_fallback",
             planning_reason="Heuristic parser could not map the advisory case question safely.",
+        )
+
+    def _try_list_question(
+        self,
+        question: str,
+        dataframe: pd.DataFrame,
+        dataset_file_name: str,
+    ) -> StructuredQueryResult | None:
+        asks_for_listing = any(term in question for term in ("what", "which", "list", "show"))
+        asks_about_products = "product" in question
+        references_case_data = any(
+            phrase in question
+            for phrase in (
+                "in the data",
+                "in the advisory case data",
+                "in the case pipeline",
+                "in the pipeline",
+            )
+        )
+
+        if not (asks_for_listing and asks_about_products and references_case_data):
+            return None
+
+        return self._build_distinct_product_list_result(
+            dataframe=dataframe,
+            dataset_file_name=dataset_file_name,
+            planning_method="heuristic_fallback",
+            planning_reason="Heuristic parser matched a distinct advisory product listing request.",
         )
 
     def _try_count_question(
@@ -414,6 +458,38 @@ class AdvisoryCaseQueryHandler:
             matched_customer_name=None,
             matched_customer_names=case_names,
             matched_field_name=field_name,
+            planning_method=planning_method,
+            planning_reason=planning_reason,
+        )
+
+    def _build_distinct_product_list_result(
+        self,
+        dataframe: pd.DataFrame,
+        dataset_file_name: str,
+        planning_method: str,
+        planning_reason: str | None,
+    ) -> StructuredQueryResult:
+        products = sorted(
+            {
+                str(product).strip()
+                for product in dataframe["requested_product"].dropna().astype(str).tolist()
+                if str(product).strip()
+            }
+        )
+        if not products:
+            answer = "No requested products are listed in the current advisory case pipeline."
+        else:
+            answer = f"Products in the current advisory case pipeline: {', '.join(products)}."
+
+        return StructuredQueryResult(
+            answer=answer,
+            sources_used=[f"{dataset_file_name} | distinct values: requested_product"],
+            support_level="high",
+            limitations="This list is taken directly from distinct requested_product values in the current advisory case CSV rows.",
+            matched_customer_name=None,
+            matched_customer_names=None,
+            matched_field_name="requested_product",
+            matched_field_value=None,
             planning_method=planning_method,
             planning_reason=planning_reason,
         )

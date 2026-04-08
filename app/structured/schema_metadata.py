@@ -116,7 +116,7 @@ STRUCTURED_FIELD_ALIASES: dict[StructuredDatasetName, dict[str, tuple[str, ...]]
             "case owner",
             "who owns",
         ),
-        "requested_product": ("requested product", "product"),
+        "requested_product": ("requested product", "requested products", "product", "products"),
         "preliminary_status": ("preliminary status", "status", "open"),
         "support_level": ("support level",),
         "missing_information_flags": ("missing information", "missing information flags"),
