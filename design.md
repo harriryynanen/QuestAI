@@ -69,6 +69,8 @@ The service layer orchestrates the answer flow:
 
 It also applies constrained recent-turn follow-up handling through a dedicated conversation scope resolver.
 
+The service layer now also applies lightweight question guardrails before LLM-facing planning or synthesis so obviously malformed inputs can be normalized or rejected early.
+
 ### 4.4 `app/llm/`
 
 The LLM layer is intentionally narrow. It is used for:
@@ -192,6 +194,8 @@ This is a deliberate middle ground between naive keyword matching and a heavier 
 
 Each retrieved chunk includes a machine-generated match summary, which is useful both for debugging and evaluator transparency.
 
+This remains a local heuristic retriever. It is stronger than raw keyword overlap, but it is still not equivalent to a production semantic retrieval system with embeddings, indexing strategy, evaluation, and monitoring.
+
 ## 8. Structured Execution Design
 
 Structured queries are kept deterministic for credibility and control.
@@ -205,6 +209,8 @@ Why this matters:
 The structured engine maps supported semantic plans into direct DataFrame operations and returns field-level or row-level source metadata where appropriate.
 
 This has evolved into a planner-first structured flow: the LLM helps resolve route, dataset, operation, and field against known schema metadata, while execution remains explicit and deterministic. That keeps natural language support broader without turning the structured path into free-form model execution.
+
+Structured onboarding is still controlled. Adding a genuinely new dataset still requires a small schema and execution extension rather than arbitrary zero-code ingestion.
 
 ## 9. Combined Assessment Design
 
@@ -251,6 +257,8 @@ Routing follows a layered strategy.
 - Deterministic fallback: if planning is unavailable or weak, use the rule-based router.
 - Execution fallback: retrieval and combined synthesis can fall back to deterministic summaries.
 
+There is also a lightweight pre-planning guardrail step for clearly malformed or unsafe-to-process input. This is intentionally small and should be read as risk awareness, not as comprehensive prompt-injection protection.
+
 This avoids turning ambiguity or missing AI support into a false confident answer.
 
 ## 12. Provenance And Explainability
@@ -290,6 +298,10 @@ Current limitations are deliberate and should be understood as part of the demo 
 - only a small set of structured operations is supported
 - the combined assessment logic is intentionally cautious and simplified
 - OpenAI is the only real provider implementation today even though the app now depends on a small LLM interface
+- retrieval is still local and heuristic rather than a production semantic retrieval stack
+- structured onboarding still requires small code changes for new named datasets
+- prompt-injection hardening is only lightweight demo-level guardrailing
+- observability and audit trail support are still missing
 
 These are acceptable tradeoffs for a recruitment assignment, but they would need to be addressed before production use.
 
@@ -319,5 +331,6 @@ The current codebase reflects a few targeted refactors that materially shaped th
 - advisory case pipeline execution separated from customer portfolio execution
 - retrieval corpus metadata separated from scoring logic
 - more consistent `app...` package imports across UI, API, and tests
+- lightweight question guardrails ahead of LLM-facing planning and synthesis
 
 These are not separate subsystems so much as cleanup steps that made the current architecture easier to explain and extend without changing its basic shape.

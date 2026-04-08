@@ -113,6 +113,8 @@ The ranking layer is stronger than raw keyword overlap but still inspectable. It
 
 Some retrieval hints are still demo-corpus specific by design, but they live in lightweight corpus metadata rather than directly inside the scoring rules.
 
+This is intentionally still a heuristic local retriever, not a production semantic retrieval stack. It is meaningfully better than raw keyword matching for the demo, but still weaker than an embedding-based retrieval system with evaluation, indexing, and observability around it. That heavier path is a future option, not a current feature.
+
 ## Structured Data Logic
 
 Structured data is loaded from `.csv` files under `data/structured/`.
@@ -194,6 +196,19 @@ OpenAI is the implemented provider today.
 
 The code now depends on a small LLM interface rather than wiring `OpenAIAppClient` directly into the whole application. That makes future provider extension easier, but it should be understood as readiness rather than full multi-provider support.
 
+## Lightweight Input Guardrails
+
+QuestAI now applies small input guardrails before LLM-facing planning or synthesis. These are intentionally modest and aimed at demo-level hygiene rather than full security hardening.
+
+Current safeguards include:
+
+- a reasonable question length cap
+- normalization of obviously problematic control characters
+- safe rejection of clearly malformed control-character-heavy input
+- prompt framing that treats the user question as data to analyze, not as instructions to override system behavior
+
+This does not claim to solve prompt injection. It is simply a lightweight acknowledgement of LLM-facing risk in a constrained demo.
+
 ## Lightweight API
 
 QuestAI also includes a small API entrypoint. The purpose is not to replace Streamlit, but to show that the same answer flow can be exposed to other systems through a simple HTTP surface.
@@ -221,6 +236,11 @@ If routing or evidence is weak:
 - the app returns a cautious low-support or `unknown` response
 - it does not treat missing evidence as proof that no guidance exists
 - it avoids final-decision wording when evidence is incomplete
+
+If the input itself is clearly malformed for safe LLM use:
+
+- the app can reject it before planning or synthesis
+- the response stays professional and explicit about the lightweight nature of the guardrail
 
 ## What Is Implemented Now
 
@@ -263,6 +283,8 @@ There are several places where the current system can still be wrong or incomple
 - grouped follow-up handling is intentionally narrow and not full conversational memory
 - support levels are heuristic labels, not calibrated probabilities
 - the product and policy logic is synthetic and intentionally simplified
+- prompt-injection hardening is only lightweight demo-level input hygiene, not full production protection
+- audit trail and observability are still future production-path items rather than implemented features
 
 Most importantly, the app should not be interpreted as making correct real-world financial judgments. It is a controlled demo for grounded AI-assisted decision support patterns.
 
