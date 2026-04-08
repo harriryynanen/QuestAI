@@ -154,7 +154,7 @@ def build_dynamic_prompt_chips(
 ) -> list[str]:
     """Build up to three context-aware prompt suggestions for the composer."""
     if not conversation_history:
-        return list(example_questions[:3])
+        return _build_starter_prompt_chips(example_questions)
 
     last_turn = conversation_history[-1]
     last_question = str(last_turn["question"])
@@ -200,6 +200,36 @@ def build_dynamic_prompt_chips(
             deduped.append(cleaned)
 
     return deduped[:3]
+
+
+def _build_starter_prompt_chips(example_questions: list[str]) -> list[str]:
+    """Pick a small balanced starter set with retrieval, structured, and combined examples."""
+    categorized = {
+        "retrieval": None,
+        "structured": None,
+        "combined": None,
+    }
+
+    for question in example_questions:
+        category = _categorize_example_question(question)
+        if category and categorized[category] is None:
+            categorized[category] = question
+
+    starter_chips = [
+        categorized["retrieval"],
+        categorized["structured"],
+        categorized["combined"],
+    ]
+    return [chip for chip in starter_chips if chip]
+
+
+def _categorize_example_question(question: str) -> str | None:
+    normalized = question.lower()
+    if "based on" in normalized and "data" in normalized:
+        return "combined"
+    if any(term in normalized for term in ("policy", "guide", "criteria")):
+        return "retrieval"
+    return "structured"
 
 
 def _render_answer_card(response: AnswerResponse) -> None:
