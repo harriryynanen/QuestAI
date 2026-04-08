@@ -20,6 +20,24 @@ from structured.query_engine import StructuredQueryEngine
 
 
 class AnswerService:
+    ADVISORY_CASE_TERMS = (
+        "case",
+        "cases",
+        "advisory owner",
+        "advisory_owner",
+        "who owns",
+        "case owner",
+        "customer responsible",
+        "responsible",
+        "responsible for",
+        "responsible about",
+        "owner of",
+        "support level",
+        "escalation flag",
+        "next action",
+        "preliminary status",
+    )
+
     def __init__(
         self,
         router: RuleBasedRouter,
@@ -157,17 +175,7 @@ class AnswerService:
             return semantic_plan.structured_dataset
 
         normalized = question.lower()
-        advisory_case_terms = (
-            "case",
-            "cases",
-            "advisory owner",
-            "who owns",
-            "support level",
-            "escalation flag",
-            "next action",
-            "preliminary status",
-        )
-        if any(term in normalized for term in advisory_case_terms):
+        if any(term in normalized for term in self.ADVISORY_CASE_TERMS):
             return "advisory_case_pipeline"
         return "customer_portfolio"
 

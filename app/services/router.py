@@ -2,6 +2,19 @@ from models import Route, RoutingDecision
 
 
 class RuleBasedRouter:
+    ADVISORY_OWNER_QUERY_PHRASES = (
+        "who is the advisory owner",
+        "advisory owner of",
+        "advisory_owner",
+        "who owns",
+        "owner of",
+        "case owner",
+        "responsible",
+        "responsible for",
+        "responsible about",
+        "customer responsible",
+    )
+
     DOCUMENT_INTENT_PHRASES = (
         "what does the policy say",
         "what does the guide say",
@@ -31,6 +44,7 @@ class RuleBasedRouter:
         "what is",
         "how many",
         "who owns",
+        "who is",
     )
 
     STRUCTURED_DATA_KEYWORDS = (
@@ -51,6 +65,12 @@ class RuleBasedRouter:
         "lowest",
         "interested in",
         "advisory owner",
+        "advisory_owner",
+        "case owner",
+        "customer responsible",
+        "responsible",
+        "responsible for",
+        "owner of",
         "support level",
         "escalation flag",
         "next action",
@@ -168,10 +188,16 @@ class RuleBasedRouter:
         has_structured_data_keyword = any(
             keyword in question for keyword in self.STRUCTURED_DATA_KEYWORDS
         )
+        has_advisory_owner_signal = any(
+            phrase in question for phrase in self.ADVISORY_OWNER_QUERY_PHRASES
+        )
         has_customer_row_signal = any(
             hint in question for hint in self.CUSTOMER_ROW_HINTS
         )
-        return has_structured_data_keyword and (has_structured_phrase or has_customer_row_signal)
+        return (
+            has_structured_data_keyword
+            and (has_structured_phrase or has_customer_row_signal or has_advisory_owner_signal)
+        )
 
     def _is_combined_question(self, question: str) -> bool:
         has_combined_phrase = any(

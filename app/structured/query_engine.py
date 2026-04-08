@@ -13,9 +13,36 @@ from models import (
 
 
 class StructuredQueryEngine:
+    ADVISORY_OWNER_ALIASES: tuple[str, ...] = (
+        "advisory owner",
+        "advisory_owner",
+        "owner of",
+        "case owner",
+        "who owns",
+        "who is the advisory owner",
+        "who is responsible",
+        "responsible",
+        "responsible for",
+        "responsible about",
+        "customer responsible",
+    )
+
     ADVISORY_FIELD_ALIASES: dict[str, tuple[str, ...]] = {
         "case_id": ("case id", "case"),
-        "advisory_owner": ("advisory owner", "owner", "case owner", "who owns"),
+        "advisory_owner": (
+            "advisory owner",
+            "advisory_owner",
+            "owner",
+            "owner of",
+            "case owner",
+            "who owns",
+            "who is the advisory owner",
+            "who is responsible",
+            "responsible",
+            "responsible for",
+            "responsible about",
+            "customer responsible",
+        ),
         "requested_product": ("requested product", "product"),
         "preliminary_status": ("preliminary status", "status", "open"),
         "support_level": ("support level",),
@@ -1051,8 +1078,9 @@ class StructuredQueryEngine:
         if filter_result is not None:
             return filter_result
 
-        if customer_match["status"] == "none" and any(
-            phrase in normalized for phrase in ("who owns", "next action", "case")
+        if customer_match["status"] == "none" and (
+            field_name == "advisory_owner"
+            or any(phrase in normalized for phrase in ("who owns", "next action", "case"))
         ):
             return StructuredQueryResult(
                 answer="I could not match the customer case in the advisory case pipeline.",
@@ -1241,6 +1269,11 @@ class StructuredQueryEngine:
 
     def _match_advisory_field(self, question: str) -> str | None:
         normalized = self._normalize_text(question)
+        if any(
+            self._normalize_text(alias) in normalized for alias in self.ADVISORY_OWNER_ALIASES
+        ):
+            return "advisory_owner"
+
         best_field: str | None = None
         best_length = -1
         for field_name, aliases in self.ADVISORY_FIELD_ALIASES.items():

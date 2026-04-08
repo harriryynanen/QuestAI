@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_advisory_case_escalation_filter_is_supported(
     structured_query_engine,
     advisory_dataframe,
@@ -130,3 +133,41 @@ def test_answer_service_routes_advisory_case_questions_to_structured(
     assert response.route == "structured"
     assert response.support_level == "high"
     assert "Aurora Mock Services Oy" in response.answer
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Who is the advisory owner of Harbor Foods Demo Oy?",
+        "Who is the advisory_owner of Harbor Foods Demo Oy?",
+        "advisory_owner of Harbor Foods Demo Oy",
+        "Who is responsible for Harbor Foods Demo Oy's case?",
+        "Who is customer responsible about Harbor Foods Demo Oy?",
+    ],
+)
+def test_answer_service_routes_owner_wording_variants_to_advisory_case_pipeline(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+    question,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="unknown",
+            operation="unknown",
+            confidence="low",
+            reason="Use fallback behavior in tests.",
+        )
+    )
+    service = answer_service_factory(planning_result=planning_result)
+
+    response = service.answer_question(question)
+
+    assert response.route == "structured"
+    assert response.support_level == "high"
+    assert "Mika Salonen" in response.answer
+    assert response.matched_customer_name == "Harbor Foods Demo Oy"
+    assert response.matched_field_name == "advisory_owner"
+    assert response.sources_used == [
+        "demo_advisory_case_pipeline.csv | row: Harbor Foods Demo Oy | column: advisory_owner"
+    ]
