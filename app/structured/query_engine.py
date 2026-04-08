@@ -11,38 +11,13 @@ from models import (
     StructuredQueryResult,
 )
 from structured.advisory_case_handler import AdvisoryCaseQueryHandler
+from structured.schema_metadata import (
+    get_structured_field_aliases,
+    get_structured_field_label,
+)
 
 
 class StructuredQueryEngine:
-    FIELD_ALIASES: dict[str, tuple[str, ...]] = {
-        "latest_revenue_eur": ("turnover", "revenue", "liikevaihto"),
-        "ebitda_eur": ("ebitda", "kayttokate"),
-        "ebitda_margin_pct": ("ebitda margin", "kayttokateprosentti"),
-        "equity_ratio_pct": ("equity ratio", "omavaraisuusaste"),
-        "debt_to_ebitda": ("debt to ebitda", "velka suhteessa ebitdaan", "velka suhteessa kayttokatteeseen"),
-        "years_in_operation": ("years in operation", "years in business", "toimintavuodet", "kuinka monta vuotta"),
-        "b2b_invoicing_pct": ("b2b invoicing share", "b2b share", "invoicing share"),
-        "export_sales_pct": ("export sales share", "export share", "vientiosuus"),
-        "has_tax_arrears": ("tax arrears", "unresolved tax arrears", "verovelka", "vero velka"),
-        "latest_financials_available": (
-            "latest financial statements available",
-            "financial statements available",
-            "latest financial statements",
-            "missing financial statements",
-            "financial statement",
-            "tilinpaatos",
-            "tilinpaatokset",
-        ),
-        "payment_delays_12m": ("payment delays", "repeated payment delays", "maksuviiveet"),
-        "largest_customer_share_pct": (
-            "largest customer share",
-            "customer concentration",
-            "largest customer concentration",
-            "asiakaskeskittyma",
-        ),
-        "requested_product_interest": ("interested in", "requested product interest", "kiinnostunut tuotteesta"),
-    }
-
     FILTER_DEFINITIONS: dict[str, tuple[str, str]] = {
         "has_tax_arrears": ("yes", "customers with tax arrears"),
         "payment_delays_12m": ("repeated", "customers with repeated payment delays"),
@@ -91,6 +66,7 @@ class StructuredQueryEngine:
     )
 
     def __init__(self) -> None:
+        self.field_aliases = get_structured_field_aliases("customer_portfolio")
         self.advisory_case_handler = AdvisoryCaseQueryHandler(
             normalize_text=self._normalize_text,
             match_customer=self._match_customer,
@@ -908,7 +884,7 @@ class StructuredQueryEngine:
         best_field: str | None = None
         best_length = -1
 
-        for field_name, aliases in self.FIELD_ALIASES.items():
+        for field_name, aliases in self.field_aliases.items():
             for alias in aliases:
                 normalized_alias = self._normalize_text(alias)
                 if normalized_alias in normalized and len(normalized_alias) > best_length:
@@ -980,30 +956,7 @@ class StructuredQueryEngine:
         return None
 
     def _field_label(self, field_name: str) -> str:
-        labels = {
-            "latest_revenue_eur": "turnover",
-            "ebitda_eur": "EBITDA",
-            "ebitda_margin_pct": "EBITDA margin",
-            "equity_ratio_pct": "equity ratio",
-            "debt_to_ebitda": "debt to EBITDA",
-            "years_in_operation": "years in operation",
-            "b2b_invoicing_pct": "B2B invoicing share",
-            "export_sales_pct": "export sales share",
-            "has_tax_arrears": "tax arrears",
-            "latest_financials_available": "latest financial statements available",
-            "payment_delays_12m": "payment delays",
-            "largest_customer_share_pct": "largest customer share",
-            "requested_product_interest": "requested product interest",
-            "case_id": "case ID",
-            "advisory_owner": "advisory owner",
-            "requested_product": "requested product",
-            "preliminary_status": "preliminary status",
-            "support_level": "support level",
-            "missing_information_flags": "missing information flags",
-            "escalation_flag": "escalation flag",
-            "next_action": "next action",
-        }
-        return labels[field_name]
+        return get_structured_field_label(field_name)
 
     def _assess_customer_alignment(
         self,

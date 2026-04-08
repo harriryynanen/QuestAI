@@ -41,6 +41,90 @@ STRUCTURED_DATASET_SCHEMAS: dict[StructuredDatasetName, dict[str, object]] = {
     },
 }
 
+STRUCTURED_FIELD_LABELS: dict[str, str] = {
+    "latest_revenue_eur": "turnover",
+    "ebitda_eur": "EBITDA",
+    "ebitda_margin_pct": "EBITDA margin",
+    "equity_ratio_pct": "equity ratio",
+    "debt_to_ebitda": "debt to EBITDA",
+    "years_in_operation": "years in operation",
+    "b2b_invoicing_pct": "B2B invoicing share",
+    "export_sales_pct": "export sales share",
+    "has_tax_arrears": "tax arrears",
+    "latest_financials_available": "latest financial statements available",
+    "payment_delays_12m": "payment delays",
+    "largest_customer_share_pct": "largest customer share",
+    "requested_product_interest": "requested product interest",
+    "case_id": "case ID",
+    "advisory_owner": "advisory owner",
+    "requested_product": "requested product",
+    "preliminary_status": "preliminary status",
+    "support_level": "support level",
+    "missing_information_flags": "missing information flags",
+    "escalation_flag": "escalation flag",
+    "next_action": "next action",
+}
+
+STRUCTURED_FIELD_ALIASES: dict[StructuredDatasetName, dict[str, tuple[str, ...]]] = {
+    "customer_portfolio": {
+        "latest_revenue_eur": ("turnover", "revenue", "liikevaihto"),
+        "ebitda_eur": ("ebitda", "kayttokate"),
+        "ebitda_margin_pct": ("ebitda margin", "kayttokateprosentti"),
+        "equity_ratio_pct": ("equity ratio", "omavaraisuusaste"),
+        "debt_to_ebitda": (
+            "debt to ebitda",
+            "velka suhteessa ebitdaan",
+            "velka suhteessa kayttokatteeseen",
+        ),
+        "years_in_operation": (
+            "years in operation",
+            "years in business",
+            "toimintavuodet",
+            "kuinka monta vuotta",
+        ),
+        "b2b_invoicing_pct": ("b2b invoicing share", "b2b share", "invoicing share"),
+        "export_sales_pct": ("export sales share", "export share", "vientiosuus"),
+        "has_tax_arrears": ("tax arrears", "unresolved tax arrears", "verovelka", "vero velka"),
+        "latest_financials_available": (
+            "latest financial statements available",
+            "financial statements available",
+            "latest financial statements",
+            "missing financial statements",
+            "financial statement",
+            "tilinpaatos",
+            "tilinpaatokset",
+        ),
+        "payment_delays_12m": ("payment delays", "repeated payment delays", "maksuviiveet"),
+        "largest_customer_share_pct": (
+            "largest customer share",
+            "customer concentration",
+            "largest customer concentration",
+            "asiakaskeskittyma",
+        ),
+        "requested_product_interest": (
+            "interested in",
+            "requested product interest",
+            "kiinnostunut tuotteesta",
+        ),
+    },
+    "advisory_case_pipeline": {
+        "case_id": ("case id", "case"),
+        "advisory_owner": (
+            "advisory owner",
+            "advisory_owner",
+            "owner",
+            "case owner",
+            "who owns",
+        ),
+        "requested_product": ("requested product", "product"),
+        "preliminary_status": ("preliminary status", "status", "open"),
+        "support_level": ("support level",),
+        "missing_information_flags": ("missing information", "missing information flags"),
+        "escalation_flag": ("escalation flag", "escalated", "escalation"),
+        "next_action": ("next action", "action"),
+    },
+}
+
 SUPPORTED_SEMANTIC_FIELD_NAMES: tuple[str, ...] = tuple(
     field_name
     for dataset in STRUCTURED_DATASET_SCHEMAS.values()
@@ -60,6 +144,16 @@ def infer_structured_dataset_from_field(
     if field_name is None:
         return None
     return FIELD_TO_DATASET.get(field_name)
+
+
+def get_structured_field_label(field_name: str) -> str:
+    return STRUCTURED_FIELD_LABELS[field_name]
+
+
+def get_structured_field_aliases(
+    dataset_name: StructuredDatasetName,
+) -> dict[str, tuple[str, ...]]:
+    return STRUCTURED_FIELD_ALIASES[dataset_name]
 
 
 def build_structured_schema_prompt_text() -> str:

@@ -1,33 +1,10 @@
 import pandas as pd
 
 from models import SemanticQueryPlan, StructuredQueryResult
+from structured.schema_metadata import get_structured_field_aliases
 
 
 class AdvisoryCaseQueryHandler:
-    ADVISORY_OWNER_ALIASES: tuple[str, ...] = (
-        "advisory owner",
-        "advisory_owner",
-        "who owns",
-        "case owner",
-    )
-
-    ADVISORY_FIELD_ALIASES: dict[str, tuple[str, ...]] = {
-        "case_id": ("case id", "case"),
-        "advisory_owner": (
-            "advisory owner",
-            "advisory_owner",
-            "owner",
-            "case owner",
-            "who owns",
-        ),
-        "requested_product": ("requested product", "product"),
-        "preliminary_status": ("preliminary status", "status", "open"),
-        "support_level": ("support level",),
-        "missing_information_flags": ("missing information", "missing information flags"),
-        "escalation_flag": ("escalation flag", "escalated", "escalation"),
-        "next_action": ("next action", "action"),
-    }
-
     def __init__(
         self,
         *,
@@ -40,6 +17,8 @@ class AdvisoryCaseQueryHandler:
         self._match_customer = match_customer
         self._format_value = format_value
         self._field_label = field_label
+        self.field_aliases = get_structured_field_aliases("advisory_case_pipeline")
+        self.owner_aliases = self.field_aliases["advisory_owner"]
 
     def answer(
         self,
@@ -479,13 +458,13 @@ class AdvisoryCaseQueryHandler:
     def _match_field(self, question: str) -> str | None:
         normalized = self._normalize_text(question)
         if any(
-            self._normalize_text(alias) in normalized for alias in self.ADVISORY_OWNER_ALIASES
+            self._normalize_text(alias) in normalized for alias in self.owner_aliases
         ):
             return "advisory_owner"
 
         best_field: str | None = None
         best_length = -1
-        for field_name, aliases in self.ADVISORY_FIELD_ALIASES.items():
+        for field_name, aliases in self.field_aliases.items():
             for alias in aliases:
                 normalized_alias = self._normalize_text(alias)
                 if normalized_alias in normalized and len(normalized_alias) > best_length:
