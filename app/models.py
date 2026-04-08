@@ -38,6 +38,8 @@ class AnswerResponse:
     matched_customer_name: str | None = None
     matched_customer_names: list[str] | None = None
     matched_field_name: str | None = None
+    matched_field_value: str | None = None
+    structured_dataset: StructuredDatasetName | None = None
     synthesis_method: str = "deterministic"
     synthesis_status: SynthesisStatus | None = None
     synthesis_status_message: str | None = None
@@ -115,6 +117,7 @@ class StructuredQueryResult:
     matched_customer_name: str | None
     matched_customer_names: list[str] | None
     matched_field_name: str | None
+    matched_field_value: str | None = None
     planning_method: PlanningMethod = "heuristic_fallback"
     planning_reason: str | None = None
 

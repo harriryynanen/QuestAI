@@ -105,6 +105,42 @@ def test_semantic_plan_prompt_includes_structured_dataset_schema():
     assert "next_action" in system_message
 
 
+def test_planner_context_includes_previous_structured_dataset_and_field_value(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="structured",
+            operation="fact",
+            customer_name="Riverstone Demo Logistics Ltd",
+            field_name="advisory_owner",
+            needs_structured_data=True,
+            confidence="high",
+            reason="Planner matched an advisory owner lookup.",
+            structured_dataset="advisory_case_pipeline",
+        )
+    )
+    service = answer_service_factory(planning_result=planning_result)
+    response = service.answer_question("Who is the advisory owner of Riverstone Demo Logistics Ltd?")
+
+    context = service._build_planner_context(
+        [
+            {
+                "question": "Who is the advisory owner of Riverstone Demo Logistics Ltd?",
+                "response": response,
+            }
+        ]
+    )
+
+    assert context is not None
+    assert "Structured dataset: advisory_case_pipeline" in context
+    assert "Matched field: advisory_owner" in context
+    assert "Matched field value: Mika Salonen" in context
+    assert "Matched customer: Riverstone Demo Logistics Ltd" in context
+
+
 def test_rule_router_still_routes_clear_retrieval_question(app_config):
     router = RuleBasedRouter(
         retrieval_keywords=app_config.retrieval_keywords,

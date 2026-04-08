@@ -632,6 +632,7 @@ class StructuredQueryEngine:
             matched_customer_name=customer_name,
             matched_customer_names=[customer_name],
             matched_field_name=field_name,
+            matched_field_value=str(value),
             planning_method=planning_method,
             planning_reason=planning_reason,
         )
@@ -984,7 +985,13 @@ class StructuredQueryEngine:
             )
 
         if plan.operation == "filter":
-            if plan.field_name not in {"escalation_flag", "support_level", "preliminary_status", "requested_product"}:
+            if plan.field_name not in {
+                "escalation_flag",
+                "support_level",
+                "preliminary_status",
+                "requested_product",
+                "advisory_owner",
+            }:
                 return None
             matches = self._filter_advisory_matches(
                 dataframe=dataframe,
@@ -994,6 +1001,21 @@ class StructuredQueryEngine:
             )
             if matches is None:
                 return None
+            if plan.field_name == "advisory_owner":
+                owner_name = plan.filter_value or ""
+                anchor_customer = plan.customer_name
+                if anchor_customer:
+                    matches = matches[
+                        ~matches["customer_name"].astype(str).str.lower().eq(anchor_customer.lower())
+                    ]
+                return self._build_advisory_owner_relation_result(
+                    matches=matches,
+                    owner_name=owner_name,
+                    anchor_customer=anchor_customer,
+                    dataset_file_name=dataset_file_name,
+                    planning_method=plan.method,
+                    planning_reason=plan.reason,
+                )
             return self._build_advisory_filter_result(
                 matches=matches,
                 dataset_file_name=dataset_file_name,
@@ -1217,6 +1239,39 @@ class StructuredQueryEngine:
             matched_customer_name=customer_name,
             matched_customer_names=[customer_name],
             matched_field_name=field_name,
+            matched_field_value=str(row[field_name]),
+            planning_method=planning_method,
+            planning_reason=planning_reason,
+        )
+
+    def _build_advisory_owner_relation_result(
+        self,
+        matches: pd.DataFrame,
+        owner_name: str,
+        anchor_customer: str | None,
+        dataset_file_name: str,
+        planning_method: str,
+        planning_reason: str | None,
+    ) -> StructuredQueryResult:
+        case_names = matches["customer_name"].astype(str).tolist()
+        if matches.empty:
+            answer = f"{owner_name} does not have other companies in the current advisory case pipeline."
+        else:
+            answer = f"Other companies for {owner_name}: {', '.join(case_names)}."
+
+        limitations = "This result reflects only the current advisory case CSV rows."
+        if anchor_customer:
+            limitations += f" The previously discussed company, {anchor_customer}, was excluded from the reverse lookup."
+
+        return StructuredQueryResult(
+            answer=answer,
+            sources_used=[f"{dataset_file_name} | filter: advisory_owner"],
+            support_level="high",
+            limitations=limitations,
+            matched_customer_name=None,
+            matched_customer_names=case_names,
+            matched_field_name="advisory_owner",
+            matched_field_value=owner_name,
             planning_method=planning_method,
             planning_reason=planning_reason,
         )
@@ -1266,6 +1321,13 @@ class StructuredQueryEngine:
             target = (filter_value or "yes").lower()
             return dataframe[
                 dataframe["escalation_flag"].astype(str).str.lower().eq(target)
+            ]
+
+        if field_name == "advisory_owner":
+            if not filter_value:
+                return None
+            return dataframe[
+                dataframe["advisory_owner"].astype(str).str.lower().eq(filter_value.lower())
             ]
 
         if field_name in {"support_level", "preliminary_status"}:

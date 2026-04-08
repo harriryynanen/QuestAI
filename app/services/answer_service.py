@@ -144,6 +144,8 @@ class AnswerService:
                 matched_customer_name=structured_result.matched_customer_name,
                 matched_customer_names=structured_result.matched_customer_names,
                 matched_field_name=structured_result.matched_field_name,
+                matched_field_value=structured_result.matched_field_value,
+                structured_dataset=structured_dataset,
                 synthesis_method="deterministic",
                 synthesis_status=None,
                 synthesis_status_message=None,
@@ -897,10 +899,16 @@ class AnswerService:
             lines.append(f"Assistant route: {response.route}")
             if response.matched_customer_name:
                 lines.append(f"Matched customer: {response.matched_customer_name}")
+            if response.structured_dataset:
+                lines.append(f"Structured dataset: {response.structured_dataset}")
             if response.matched_customer_names:
                 lines.append(
                     "Matched customer names: " + ", ".join(response.matched_customer_names)
                 )
+            if response.matched_field_name:
+                lines.append(f"Matched field: {response.matched_field_name}")
+            if response.matched_field_value is not None:
+                lines.append(f"Matched field value: {response.matched_field_value}")
             lines.append(f"Assistant answer: {' '.join(response.answer.split())}")
         return "\n".join(lines)
 

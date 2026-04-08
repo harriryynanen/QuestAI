@@ -67,6 +67,13 @@ class ConversationScopeResolver:
                 failure_reason=None,
             )
 
+        reverse_lookup_follow_up = self._resolve_advisory_owner_reverse_lookup_follow_up(
+            question=question,
+            previous_response=previous_response,
+        )
+        if reverse_lookup_follow_up is not None:
+            return reverse_lookup_follow_up
+
         return None
 
     def resolve_customer_names_from_context(
@@ -254,3 +261,61 @@ class ConversationScopeResolver:
                 "which ones are not aligned",
             )
         )
+
+    def _resolve_advisory_owner_reverse_lookup_follow_up(
+        self,
+        question: str,
+        previous_response,
+    ) -> SemanticPlanningResult | None:
+        if previous_response.structured_dataset != "advisory_case_pipeline":
+            return None
+        if previous_response.matched_field_name != "advisory_owner":
+            return None
+        if not previous_response.matched_field_value:
+            return None
+        if not self._looks_like_related_company_follow_up(question):
+            return None
+        if not self._references_previous_field_value(question, previous_response.matched_field_value):
+            return None
+
+        return SemanticPlanningResult(
+            plan=SemanticQueryPlan(
+                route="structured",
+                operation="filter",
+                customer_name=previous_response.matched_customer_name,
+                field_name="advisory_owner",
+                product_name=None,
+                document_topic=None,
+                comparison_direction=None,
+                filter_value=previous_response.matched_field_value,
+                needs_documents=False,
+                needs_structured_data=True,
+                confidence="high",
+                reason="Follow-up reuses the previously resolved advisory owner value for a deterministic reverse lookup.",
+                method="heuristic_fallback",
+                structured_dataset="advisory_case_pipeline",
+            ),
+            status="success",
+            failure_reason=None,
+        )
+
+    def _looks_like_related_company_follow_up(self, question: str) -> bool:
+        normalized = question.lower()
+        return "other compan" in normalized and any(
+            phrase in normalized for phrase in ("does ", "what other companies")
+        )
+
+    def _references_previous_field_value(
+        self,
+        question: str,
+        field_value: str,
+    ) -> bool:
+        normalized_question = question.lower()
+        normalized_value = field_value.lower()
+        if normalized_value in normalized_question:
+            return True
+
+        value_tokens = [token for token in normalized_value.split() if len(token) > 2]
+        if not value_tokens:
+            return False
+        return value_tokens[0] in normalized_question

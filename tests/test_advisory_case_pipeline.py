@@ -338,3 +338,90 @@ def test_answer_service_uses_semantic_plan_for_advisory_case_queries(
     assert response.support_level == "high"
     assert expected_snippet in response.answer
     assert response.matched_field_name == expected_field
+
+
+def test_advisory_owner_follow_up_can_list_other_companies_for_same_owner(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="unknown",
+            operation="unknown",
+            confidence="low",
+            reason="Use follow-up fallback behavior in tests.",
+        )
+    )
+    service = answer_service_factory(planning_result=planning_result)
+
+    first_response = service.answer_question("Who is the advisory owner of Riverstone Demo Logistics Ltd?")
+    follow_up_response = service.answer_question(
+        "Does Mika have other companies?",
+        conversation_turns=[
+            {
+                "question": "Who is the advisory owner of Riverstone Demo Logistics Ltd?",
+                "response": first_response,
+            }
+        ],
+    )
+
+    assert first_response.route == "structured"
+    assert first_response.matched_field_name == "advisory_owner"
+    assert first_response.matched_field_value == "Mika Salonen"
+    assert follow_up_response.route == "structured"
+    assert "Harbor Foods Demo Oy" in follow_up_response.answer
+    assert "Riverstone Demo Logistics Ltd" not in follow_up_response.answer
+
+
+def test_advisory_owner_follow_up_can_list_other_companies_with_explicit_question_form(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="unknown",
+            operation="unknown",
+            confidence="low",
+            reason="Use follow-up fallback behavior in tests.",
+        )
+    )
+    service = answer_service_factory(planning_result=planning_result)
+
+    first_response = service.answer_question("Who is the advisory owner of Riverstone Demo Logistics Ltd?")
+    follow_up_response = service.answer_question(
+        "What other companies does Mika have?",
+        conversation_turns=[
+            {
+                "question": "Who is the advisory owner of Riverstone Demo Logistics Ltd?",
+                "response": first_response,
+            }
+        ],
+    )
+
+    assert follow_up_response.route == "structured"
+    assert "Harbor Foods Demo Oy" in follow_up_response.answer
+    assert "Riverstone Demo Logistics Ltd" not in follow_up_response.answer
+
+
+def test_advisory_owner_relation_follow_up_without_prior_context_fails_safely(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="unknown",
+            operation="unknown",
+            confidence="low",
+            reason="Use follow-up fallback behavior in tests.",
+        )
+    )
+    service = answer_service_factory(planning_result=planning_result)
+
+    response = service.answer_question("Does Mika have other companies?")
+
+    assert response.route in {"unknown", "structured"}
+    assert response.support_level == "low"
+    assert "could not route" in response.answer.lower() or "could not determine" in response.answer.lower()
