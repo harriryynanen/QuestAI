@@ -65,3 +65,60 @@ def test_retriever_can_expand_generic_product_questions_to_product_sections():
         for item in results
     )
     assert any("query expansion:" in item.match_summary for item in results)
+
+
+def test_retriever_can_expand_other_products_question_beyond_named_product():
+    chunker = MarkdownChunker(max_characters=400)
+    document = DocumentRecord(
+        document_id="product_guide",
+        file_name="demo_product_guide.md",
+        path=Path("demo_product_guide.md"),
+        text=Path("data/docs/demo_product_guide.md").read_text(encoding="utf-8"),
+        source_type="markdown",
+    )
+    chunks = chunker.chunk_documents([document])
+    retriever = KeywordRetriever(top_k=5)
+
+    results = retriever.retrieve(
+        "What other products are there by name than FlexLine Demo?",
+        chunks,
+    )
+
+    combined_text = " ".join(
+        f"{item.chunk.section_heading or ''} {item.chunk.text}" for item in results
+    ).lower()
+
+    assert results
+    assert "invoicebridge" in combined_text
+    assert "assetgrow" in combined_text
+    assert any("product overview boost" in item.match_summary for item in results)
+
+
+def test_retriever_can_expand_alternatives_besides_named_product():
+    chunker = MarkdownChunker(max_characters=400)
+    document = DocumentRecord(
+        document_id="product_guide",
+        file_name="demo_product_guide.md",
+        path=Path("demo_product_guide.md"),
+        text=Path("data/docs/demo_product_guide.md").read_text(encoding="utf-8"),
+        source_type="markdown",
+    )
+    chunks = chunker.chunk_documents([document])
+    retriever = KeywordRetriever(top_k=5)
+
+    results = retriever.retrieve(
+        "What alternatives are there besides FlexLine Demo?",
+        chunks,
+    )
+
+    combined_text = " ".join(
+        f"{item.chunk.section_heading or ''} {item.chunk.text}" for item in results
+    ).lower()
+
+    assert results
+    assert "invoicebridge" in combined_text
+    assert "assetgrow" in combined_text
+    assert any(
+        "sibling product boost:" in item.match_summary or "query expansion:" in item.match_summary
+        for item in results
+    )

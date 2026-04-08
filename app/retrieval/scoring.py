@@ -19,6 +19,8 @@ class QueryProfile:
     phrases: list[str]
     expanded_terms: list[str]
     has_specific_product: bool
+    asks_product_alternatives: bool
+    referenced_product_terms: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -45,6 +47,7 @@ class RetrievalScoringHelper:
 
     PRODUCT_TERMS = {"flexline", "invoicebridge", "assetgrow"}
     GENERIC_PRODUCT_TERMS = {"product", "products", "service", "services", "offering", "offerings"}
+    ALTERNATIVE_PRODUCT_TERMS = {"alternative", "alternatives", "other", "besides"}
     POLICY_TERMS = {"policy", "criteria", "eligibility", "guide", "guideline", "instruction"}
     STOPWORDS = {
         "a",
@@ -92,6 +95,9 @@ class RetrievalScoringHelper:
     MULTI_TERM_COVERAGE_BONUS = 0.5
     GENERAL_POLICY_HEADING_BONUS = 1.1
     PRODUCT_SECTION_BOOST = 0.9
+    PRODUCT_OVERVIEW_BOOST = 1.4
+    SIBLING_PRODUCT_SECTION_BOOST = 1.1
+    REFERENCED_PRODUCT_SECTION_PENALTY = 4.0
     PRODUCT_SPECIFIC_PENALTY = 1.0
     MIN_SCORE = 1.25
     KNOWN_PHRASES = [
@@ -124,12 +130,27 @@ class RetrievalScoringHelper:
         phrases = [phrase for phrase in cls.KNOWN_PHRASES if phrase in normalized_question]
         expanded_terms: list[str] = []
 
-        has_specific_product = any(term in normalized_question for term in cls.PRODUCT_TERMS)
-        asks_about_products = any(term in base_terms for term in cls.GENERIC_PRODUCT_TERMS)
+        referenced_product_terms = tuple(
+            sorted(term for term in cls.PRODUCT_TERMS if term in normalized_question)
+        )
+        has_specific_product = bool(referenced_product_terms)
+        asks_for_other_products = cls._asks_for_other_products(
+            normalized_question,
+            base_terms,
+        )
+        asks_about_products = any(term in base_terms for term in cls.GENERIC_PRODUCT_TERMS) or (
+            has_specific_product and asks_for_other_products
+        )
+        asks_product_alternatives = asks_about_products and asks_for_other_products
+
         if asks_about_products and not has_specific_product:
             for term in sorted(cls.PRODUCT_TERMS):
                 expanded_terms.append(term)
                 term_weights.setdefault(term, 0.45)
+        elif asks_product_alternatives and referenced_product_terms:
+            for term in sorted(cls.PRODUCT_TERMS - set(referenced_product_terms)):
+                expanded_terms.append(term)
+                term_weights.setdefault(term, 0.5)
 
         return QueryProfile(
             normalized_question=normalized_question,
@@ -137,6 +158,8 @@ class RetrievalScoringHelper:
             phrases=phrases,
             expanded_terms=expanded_terms,
             has_specific_product=has_specific_product,
+            asks_product_alternatives=asks_product_alternatives,
+            referenced_product_terms=referenced_product_terms,
         )
 
     @classmethod
@@ -238,6 +261,10 @@ class RetrievalScoringHelper:
             if expanded_matches:
                 notes.append(f"query expansion: {', '.join(expanded_matches)}")
 
+        if query.asks_product_alternatives and heading_text == "overview":
+            score += cls.PRODUCT_OVERVIEW_BOOST
+            notes.append("product overview boost")
+
         if any(term in heading_text for term in cls.PRODUCT_TERMS):
             if query.has_specific_product or query.expanded_terms:
                 score += cls.PRODUCT_SECTION_BOOST
@@ -245,6 +272,25 @@ class RetrievalScoringHelper:
             else:
                 score -= cls.PRODUCT_SPECIFIC_PENALTY
                 notes.append("product-specific section penalty")
+
+            if query.asks_product_alternatives:
+                sibling_matches = [
+                    term
+                    for term in query.expanded_terms
+                    if term in heading_text or term in matched_terms
+                ]
+                if sibling_matches:
+                    score += cls.SIBLING_PRODUCT_SECTION_BOOST
+                    notes.append(f"sibling product boost: {', '.join(sorted(sibling_matches))}")
+
+                referenced_matches = [
+                    term for term in query.referenced_product_terms if term in heading_text
+                ]
+                if referenced_matches:
+                    score -= cls.REFERENCED_PRODUCT_SECTION_PENALTY
+                    notes.append(
+                        f"referenced product penalty: {', '.join(sorted(referenced_matches))}"
+                    )
 
         if any(term in matched_terms for term in cls.POLICY_TERMS):
             notes.append("policy terms matched")
@@ -283,3 +329,20 @@ class RetrievalScoringHelper:
         if token.endswith("s") and len(token) > 4 and not token.endswith("ss"):
             return token[:-1]
         return token
+
+    @classmethod
+    def _asks_for_other_products(
+        cls,
+        normalized_question: str,
+        base_terms: list[str],
+    ) -> bool:
+        if any(term in base_terms for term in cls.ALTERNATIVE_PRODUCT_TERMS):
+            return True
+
+        comparative_phrases = (
+            "other products than",
+            "other product than",
+            "besides",
+            "other than",
+        )
+        return any(phrase in normalized_question for phrase in comparative_phrases)
