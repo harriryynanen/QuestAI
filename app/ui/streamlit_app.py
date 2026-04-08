@@ -4,16 +4,15 @@ from __future__ import annotations
 
 import streamlit as st
 
+try:
+    from app.bootstrap import build_app_services
+except ModuleNotFoundError:
+    from bootstrap import build_app_services
 from config import build_app_config
 from llm.openai_client import OpenAIAppClient
 from retrieval.chunker import MarkdownChunker
 from retrieval.document_store import DocumentStore
-from retrieval.retriever import KeywordRetriever
 from services.answer_service import AnswerService
-from services.router import RuleBasedRouter
-from structured.customer_data import CustomerDataLoader
-from structured.planner import StructuredQueryPlanner
-from structured.query_engine import StructuredQueryEngine
 from ui.components import (
     build_dynamic_prompt_chips,
     render_composer,
@@ -63,50 +62,6 @@ def _submit_question(answer_service: AnswerService) -> None:
     st.session_state[QUESTION_INPUT_KEY] = ""
 
 
-def _build_answer_service(
-    config,
-) -> tuple[
-    AnswerService,
-    DocumentStore,
-    CustomerDataLoader,
-    MarkdownChunker,
-    OpenAIAppClient,
-]:
-    """Construct the current application services used by the UI."""
-    router = RuleBasedRouter(
-        retrieval_keywords=config.retrieval_keywords,
-        structured_keywords=config.structured_keywords,
-    )
-    document_store = DocumentStore(
-        docs_path=config.docs_path,
-        pdf_min_text_characters=config.pdf_min_text_characters,
-    )
-    chunker = MarkdownChunker(max_characters=config.markdown_chunk_max_characters)
-    retriever = KeywordRetriever(top_k=config.retrieval_top_k)
-    llm_client = OpenAIAppClient(
-        model=config.openai_model,
-        enabled=config.llm_enabled_for_retrieval,
-        api_key=config.openai_api_key,
-    )
-    customer_data_loader = CustomerDataLoader(
-        structured_data_path=config.structured_data_path
-    )
-    structured_query_engine = StructuredQueryEngine()
-    structured_query_planner = StructuredQueryPlanner(llm_client)
-    answer_service = AnswerService(
-        router=router,
-        document_store=document_store,
-        customer_data_loader=customer_data_loader,
-        chunker=chunker,
-        retriever=retriever,
-        structured_query_engine=structured_query_engine,
-        llm_client=llm_client,
-        structured_query_planner=structured_query_planner,
-        retrieval_context_max_characters=config.retrieval_context_max_characters,
-    )
-    return answer_service, document_store, customer_data_loader, chunker, llm_client
-
-
 def _build_status_line(
     config,
     llm_client: OpenAIAppClient,
@@ -142,7 +97,7 @@ def run_app() -> None:
         customer_data_loader,
         chunker,
         llm_client,
-    ) = _build_answer_service(config)
+    ) = build_app_services(config)
 
     retrieval_bundle = document_store.load_retrieval_bundle()
     retrieval_documents = retrieval_bundle.documents

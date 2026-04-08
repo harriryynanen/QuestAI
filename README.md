@@ -507,6 +507,17 @@ You can also use `.streamlit/secrets.toml` based on `.streamlit/secrets.toml.exa
 streamlit run app/main.py
 ```
 
+### Run The Lightweight API
+
+```bash
+uvicorn app.api:app --reload
+```
+
+Available demo endpoints:
+
+- `GET /health`
+- `POST /answer`
+
 ### Tests
 
 ```bash
