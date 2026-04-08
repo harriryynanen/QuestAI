@@ -170,3 +170,62 @@ def test_retrieval_flow_can_cite_text_sources(
     assert response.route == "retrieval"
     assert response.sources_used
     assert any("policy.txt" in source for source in response.sources_used)
+
+
+def test_answer_service_rejects_overly_long_question_before_planning(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="retrieval",
+            operation="policy_lookup",
+            document_topic="tax arrears",
+            needs_documents=True,
+            confidence="high",
+            reason="The question asks for document guidance.",
+        )
+    )
+    service = answer_service_factory(planning_result=planning_result)
+
+    response = service.answer_question("A" * 2001)
+
+    assert response.route == "unknown"
+    assert response.routing_method == "safe_fallback"
+    assert "too long" in response.answer.lower()
+    assert "lightweight input hygiene" in response.limitations.lower()
+
+
+def test_answer_service_normalizes_small_control_character_noise_without_breaking_valid_question(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="retrieval",
+            operation="policy_lookup",
+            document_topic="tax arrears",
+            needs_documents=True,
+            confidence="high",
+            reason="The question asks for document guidance.",
+        )
+    )
+    retrieval_result = RetrievalSynthesisResult(
+        answer="The policy treats unresolved tax arrears as a negative screening condition.",
+        support_level="high",
+        limitations="This answer is grounded only in retrieved markdown passages.",
+        synthesis_method="llm",
+        status="success",
+        failure_reason=None,
+    )
+    service = answer_service_factory(
+        planning_result=planning_result,
+        retrieval_result=retrieval_result,
+    )
+
+    response = service.answer_question("What\x00 does the policy say about tax arrears?\x07")
+
+    assert response.route == "retrieval"
+    assert response.answer == retrieval_result.answer

@@ -14,6 +14,7 @@ from app.retrieval.chunker import MarkdownChunker
 from app.retrieval.document_store import DocumentStore
 from app.retrieval.retriever import KeywordRetriever
 from app.services.conversation_scope import ConversationScopeResolver
+from app.services.question_guardrails import QuestionGuardrails
 from app.services.router import RuleBasedRouter, is_confident_routing_decision
 from app.structured.customer_data import CustomerDataLoader
 from app.structured.planner import StructuredQueryPlanner
@@ -65,6 +66,11 @@ class AnswerService:
         question: str,
         conversation_turns: list[dict[str, object]] | None = None,
     ) -> AnswerResponse:
+        guardrail_result = QuestionGuardrails.check(question)
+        if guardrail_result.rejection_reason is not None:
+            return self._build_guardrail_response(guardrail_result.rejection_reason)
+
+        question = guardrail_result.normalized_question
         planner_context = self._build_planner_context(
             conversation_turns=conversation_turns,
         )
@@ -166,6 +172,32 @@ class AnswerService:
             dataset_file_name=dataset_file_name,
             dataset_info_file_name=dataset_info.file_name if dataset_info.dataset_found else None,
             resolved_customer_names=resolved_customer_names,
+        )
+
+    def _build_guardrail_response(self, reason: str) -> AnswerResponse:
+        return AnswerResponse(
+            answer=reason,
+            sources_used=[],
+            support_level="low",
+            limitations=(
+                "This demo applies lightweight input hygiene before sending user text into planning or synthesis. "
+                "It does not claim to fully solve prompt-injection or adversarial input risks."
+            ),
+            route="unknown",
+            retrieved_chunks=[],
+            follow_up_questions=[
+                "Try asking one shorter business question about the policy, products, customers, or advisory cases."
+            ],
+            matched_customer_name=None,
+            matched_field_name=None,
+            synthesis_method="deterministic",
+            synthesis_status=None,
+            synthesis_status_message=None,
+            routing_method="safe_fallback",
+            routing_confidence="low",
+            routing_reason="Input guardrail rejected the question before planning or synthesis.",
+            planning_method=None,
+            planning_reason=None,
         )
 
     def _select_structured_dataset(
