@@ -1,4 +1,8 @@
 from models import RetrievedChunk
+from structured.schema_metadata import (
+    SUPPORTED_SEMANTIC_FIELD_NAMES,
+    build_structured_schema_prompt_text,
+)
 
 
 def build_retrieval_messages(
@@ -49,6 +53,8 @@ def build_semantic_plan_messages(
     question: str,
     conversation_context: str | None = None,
 ) -> list[dict[str, str]]:
+    schema_text = build_structured_schema_prompt_text()
+    supported_field_names = ", ".join(SUPPORTED_SEMANTIC_FIELD_NAMES)
     instructions = (
         "Interpret the user's question into a constrained semantic plan for a fictional business banking advisory demo. "
         "Do not answer the question. "
@@ -57,18 +63,17 @@ def build_semantic_plan_messages(
         "operation must be one of: fact, filter, comparison, count, list, exists, policy_lookup, product_guidance, preliminary_assessment, unknown. "
         "confidence must be one of: low, medium, high. "
         "field_name should use only supported internal column names when known, otherwise null. "
-        "Supported field_name values include: latest_revenue_eur, ebitda_eur, ebitda_margin_pct, equity_ratio_pct, debt_to_ebitda, years_in_operation, b2b_invoicing_pct, export_sales_pct, has_tax_arrears, latest_financials_available, payment_delays_12m, largest_customer_share_pct, requested_product_interest, case_id, advisory_owner, requested_product, preliminary_status, support_level, missing_information_flags, escalation_flag, next_action. "
+        f"Supported field_name values include: {supported_field_names}. "
         "structured_dataset must be one of: customer_portfolio, advisory_case_pipeline, or null. "
         "comparison_direction must be highest, lowest, or null. "
         "Use retrieval for questions about policies, guides, guidance, criteria, product descriptions, or document interpretation. "
         "Use structured for customer facts, case facts, filters, counts, list requests, existence checks, or comparisons from CSV data. "
-        "Use advisory_case_pipeline for case-owner, next-action, support-level, escalation-flag, requested-product, or case-status questions. "
-        "Use customer_portfolio for customer financial facts and portfolio metrics. "
         "Use combined when the question explicitly needs both document guidance and structured customer data together, including questions about which of a referenced customer group appear aligned with a product or criteria. "
         "Use unknown when the question is too unclear to map safely. "
         "If recent conversation context is provided, use it only to resolve follow-up references such as 'those customers', 'they', or 'that customer'. "
         "Do not repeat the previous operation blindly just because similar wording appeared in the context. "
-        "Support modest English and Finnish business wording variation."
+        "Support modest English and Finnish business wording variation. "
+        f"{schema_text}"
     )
 
     if conversation_context:

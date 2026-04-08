@@ -17,6 +17,7 @@ from services.router import RuleBasedRouter, is_confident_routing_decision
 from structured.customer_data import CustomerDataLoader
 from structured.planner import StructuredQueryPlanner
 from structured.query_engine import StructuredQueryEngine
+from structured.schema_metadata import infer_structured_dataset_from_field
 
 
 class AnswerService:
@@ -24,18 +25,12 @@ class AnswerService:
         "case",
         "cases",
         "advisory owner",
-        "advisory_owner",
         "who owns",
-        "case owner",
-        "customer responsible",
-        "responsible",
-        "responsible for",
-        "responsible about",
-        "owner of",
         "support level",
         "escalation flag",
         "next action",
         "preliminary status",
+        "open cases",
     )
 
     def __init__(
@@ -173,6 +168,10 @@ class AnswerService:
     ) -> StructuredDatasetName:
         if semantic_plan is not None and semantic_plan.structured_dataset is not None:
             return semantic_plan.structured_dataset
+        if semantic_plan is not None:
+            inferred_dataset = infer_structured_dataset_from_field(semantic_plan.field_name)
+            if inferred_dataset is not None:
+                return inferred_dataset
 
         normalized = question.lower()
         if any(term in normalized for term in self.ADVISORY_CASE_TERMS):

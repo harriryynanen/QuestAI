@@ -3,16 +3,9 @@ from models import Route, RoutingDecision
 
 class RuleBasedRouter:
     ADVISORY_OWNER_QUERY_PHRASES = (
-        "who is the advisory owner",
-        "advisory owner of",
-        "advisory_owner",
+        "advisory owner",
         "who owns",
-        "owner of",
         "case owner",
-        "responsible",
-        "responsible for",
-        "responsible about",
-        "customer responsible",
     )
 
     DOCUMENT_INTENT_PHRASES = (
@@ -44,7 +37,6 @@ class RuleBasedRouter:
         "what is",
         "how many",
         "who owns",
-        "who is",
     )
 
     STRUCTURED_DATA_KEYWORDS = (
@@ -65,12 +57,6 @@ class RuleBasedRouter:
         "lowest",
         "interested in",
         "advisory owner",
-        "advisory_owner",
-        "case owner",
-        "customer responsible",
-        "responsible",
-        "responsible for",
-        "owner of",
         "support level",
         "escalation flag",
         "next action",

@@ -3,6 +3,7 @@ import json
 from openai import OpenAI
 
 from llm.prompts import (
+    SUPPORTED_SEMANTIC_FIELD_NAMES,
     build_combined_answer_messages,
     build_retrieval_messages,
     build_semantic_plan_messages,
@@ -196,19 +197,7 @@ class OpenAIAppClient:
                                 "field_name": {
                                     "type": ["string", "null"],
                                     "enum": [
-                                        "latest_revenue_eur",
-                                        "ebitda_eur",
-                                        "ebitda_margin_pct",
-                                        "equity_ratio_pct",
-                                        "debt_to_ebitda",
-                                        "years_in_operation",
-                                        "b2b_invoicing_pct",
-                                        "export_sales_pct",
-                                        "has_tax_arrears",
-                                        "latest_financials_available",
-                                        "payment_delays_12m",
-                                        "largest_customer_share_pct",
-                                        "requested_product_interest",
+                                        *SUPPORTED_SEMANTIC_FIELD_NAMES,
                                         None,
                                     ],
                                 },
@@ -276,6 +265,7 @@ class OpenAIAppClient:
             "needs_structured_data",
             "confidence",
             "reason",
+            "structured_dataset",
         }
         if not required_keys.issubset(payload.keys()):
             return SemanticPlanningResult(

@@ -1,6 +1,7 @@
 import json
 
 from llm.openai_client import OpenAIAppClient
+from llm.prompts import build_semantic_plan_messages
 from models import RoutingDecision
 from services.router import RuleBasedRouter, is_confident_routing_decision
 
@@ -25,6 +26,7 @@ def test_semantic_planning_parses_valid_json(monkeypatch):
         "needs_structured_data": True,
         "confidence": "high",
         "reason": "The question asks for one customer field from the CSV.",
+        "structured_dataset": "customer_portfolio",
     }
 
     class FakeResponses:
@@ -46,6 +48,61 @@ def test_semantic_planning_parses_valid_json(monkeypatch):
     assert result.plan.field_name == "equity_ratio_pct"
     assert result.plan.needs_structured_data is True
     assert result.plan.needs_documents is False
+    assert result.plan.structured_dataset == "customer_portfolio"
+
+
+def test_semantic_planning_parses_advisory_case_fields(monkeypatch):
+    llm_client = OpenAIAppClient(
+        model="gpt-5.4-mini",
+        enabled=True,
+        api_key="test-key",
+    )
+
+    payload = {
+        "route": "structured",
+        "operation": "fact",
+        "customer_name": "Harbor Foods Demo Oy",
+        "field_name": "advisory_owner",
+        "product_name": None,
+        "document_topic": None,
+        "comparison_direction": None,
+        "filter_value": None,
+        "needs_documents": False,
+        "needs_structured_data": True,
+        "confidence": "high",
+        "reason": "The question asks for the person responsible for one advisory case.",
+        "structured_dataset": "advisory_case_pipeline",
+    }
+
+    class FakeResponses:
+        @staticmethod
+        def create(**kwargs):
+            return type("Response", (), {"output_text": json.dumps(payload)})()
+
+    class FakeClient:
+        responses = FakeResponses()
+
+    monkeypatch.setattr(llm_client, "_get_client", lambda: FakeClient())
+
+    result = llm_client.plan_question("Who is responsible for Harbor Foods Demo Oy's case?")
+
+    assert result.status == "success"
+    assert result.plan.route == "structured"
+    assert result.plan.operation == "fact"
+    assert result.plan.customer_name == "Harbor Foods Demo Oy"
+    assert result.plan.field_name == "advisory_owner"
+    assert result.plan.structured_dataset == "advisory_case_pipeline"
+
+
+def test_semantic_plan_prompt_includes_structured_dataset_schema():
+    messages = build_semantic_plan_messages("Who is responsible for Harbor Foods Demo Oy's case?")
+    system_message = messages[0]["content"]
+
+    assert "Available structured datasets:" in system_message
+    assert "customer_portfolio" in system_message
+    assert "advisory_case_pipeline" in system_message
+    assert "advisory_owner" in system_message
+    assert "next_action" in system_message
 
 
 def test_rule_router_still_routes_clear_retrieval_question(app_config):

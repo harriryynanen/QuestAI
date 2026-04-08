@@ -16,15 +16,8 @@ class StructuredQueryEngine:
     ADVISORY_OWNER_ALIASES: tuple[str, ...] = (
         "advisory owner",
         "advisory_owner",
-        "owner of",
-        "case owner",
         "who owns",
-        "who is the advisory owner",
-        "who is responsible",
-        "responsible",
-        "responsible for",
-        "responsible about",
-        "customer responsible",
+        "case owner",
     )
 
     ADVISORY_FIELD_ALIASES: dict[str, tuple[str, ...]] = {
@@ -33,15 +26,8 @@ class StructuredQueryEngine:
             "advisory owner",
             "advisory_owner",
             "owner",
-            "owner of",
             "case owner",
             "who owns",
-            "who is the advisory owner",
-            "who is responsible",
-            "responsible",
-            "responsible for",
-            "responsible about",
-            "customer responsible",
         ),
         "requested_product": ("requested product", "product"),
         "preliminary_status": ("preliminary status", "status", "open"),
