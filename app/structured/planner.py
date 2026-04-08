@@ -1,9 +1,9 @@
-from llm.openai_client import OpenAIAppClient
+from llm.client import LLMClient
 from models import SemanticPlanningResult, SemanticQueryPlan
 
 
 class StructuredQueryPlanner:
-    def __init__(self, llm_client: OpenAIAppClient) -> None:
+    def __init__(self, llm_client: LLMClient) -> None:
         self.llm_client = llm_client
 
     def plan(

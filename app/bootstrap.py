@@ -11,6 +11,7 @@ if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
 from config import AppConfig
+from llm.client import LLMClient
 from llm.openai_client import OpenAIAppClient
 from retrieval.chunker import MarkdownChunker
 from retrieval.document_store import DocumentStore
@@ -29,7 +30,7 @@ def build_app_services(
     DocumentStore,
     CustomerDataLoader,
     MarkdownChunker,
-    OpenAIAppClient,
+    LLMClient,
 ]:
     """Construct the current QuestAI service graph used by local entrypoints."""
     router = RuleBasedRouter(
@@ -42,11 +43,7 @@ def build_app_services(
     )
     chunker = MarkdownChunker(max_characters=config.markdown_chunk_max_characters)
     retriever = KeywordRetriever(top_k=config.retrieval_top_k)
-    llm_client = OpenAIAppClient(
-        model=config.openai_model,
-        enabled=config.llm_enabled_for_retrieval,
-        api_key=config.openai_api_key,
-    )
+    llm_client = _build_llm_client(config)
     customer_data_loader = CustomerDataLoader(
         structured_data_path=config.structured_data_path
     )
@@ -64,3 +61,17 @@ def build_app_services(
         retrieval_context_max_characters=config.retrieval_context_max_characters,
     )
     return answer_service, document_store, customer_data_loader, chunker, llm_client
+
+
+def _build_llm_client(config: AppConfig) -> LLMClient:
+    """Construct the configured LLM client for planning and synthesis."""
+    if config.llm_provider != "openai":
+        raise ValueError(
+            f"Unsupported LLM provider: {config.llm_provider}. Only 'openai' is currently supported."
+        )
+
+    return OpenAIAppClient(
+        model=config.openai_model,
+        enabled=config.llm_enabled_for_retrieval,
+        api_key=config.openai_api_key,
+    )

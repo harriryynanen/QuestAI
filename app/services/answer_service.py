@@ -1,4 +1,4 @@
-from llm.openai_client import OpenAIAppClient
+from llm.client import LLMClient
 from models import (
     AnswerResponse,
     CombinedEvidence,
@@ -42,7 +42,7 @@ class AnswerService:
         chunker: MarkdownChunker,
         retriever: KeywordRetriever,
         structured_query_engine: StructuredQueryEngine,
-        llm_client: OpenAIAppClient,
+        llm_client: LLMClient,
         structured_query_planner: StructuredQueryPlanner,
         retrieval_context_max_characters: int,
         conversation_scope_resolver: ConversationScopeResolver | None = None,

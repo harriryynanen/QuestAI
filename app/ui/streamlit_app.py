@@ -9,7 +9,7 @@ try:
 except ModuleNotFoundError:
     from bootstrap import build_app_services
 from config import build_app_config
-from llm.openai_client import OpenAIAppClient
+from llm.client import LLMClient
 from retrieval.chunker import MarkdownChunker
 from retrieval.document_store import DocumentStore
 from services.answer_service import AnswerService
@@ -64,7 +64,7 @@ def _submit_question(answer_service: AnswerService) -> None:
 
 def _build_status_line(
     config,
-    llm_client: OpenAIAppClient,
+    llm_client: LLMClient,
     retrieval_documents: list,
     chunks: list,
     customer_data_loader,

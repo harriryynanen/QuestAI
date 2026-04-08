@@ -20,6 +20,7 @@ class AppConfig:
     retrieval_top_k: int = 3
     retrieval_context_max_characters: int = 2400
     llm_enabled_for_retrieval: bool = True
+    llm_provider: str = "openai"
     openai_api_key: str | None = None
     openai_model: str = "gpt-5.4-mini"
     app_title: str = "QuestAI"
@@ -121,6 +122,7 @@ def build_app_config() -> AppConfig:
         docs_path=PROJECT_ROOT / "data" / "docs",
         structured_data_path=PROJECT_ROOT / "data" / "structured",
         llm_enabled_for_retrieval=get_runtime_bool("ENABLE_LLM_FOR_RETRIEVAL", True),
+        llm_provider=get_runtime_setting("LLM_PROVIDER", "openai") or "openai",
         openai_api_key=get_runtime_setting("OPENAI_API_KEY"),
         openai_model=get_runtime_setting("OPENAI_MODEL", "gpt-5.4-mini") or "gpt-5.4-mini",
     )

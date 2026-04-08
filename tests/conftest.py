@@ -62,6 +62,30 @@ class StubOpenAIClient:
     def synthesize_combined_answer(self, question: str, evidence, document_evidence: list[str]) -> RetrievalSynthesisResult:
         return self.combined_result
 
+    def plan_question(
+        self,
+        question: str,
+        conversation_context: str | None = None,
+    ) -> SemanticPlanningResult:
+        return make_planning_result(
+            make_plan(
+                route="unknown",
+                operation="unknown",
+                needs_documents=False,
+                needs_structured_data=False,
+                confidence="low",
+                reason="Stub client does not plan questions.",
+            ),
+            status="disabled",
+            failure_reason="Stub client does not plan questions.",
+        )
+
+    def is_available(self) -> bool:
+        return False
+
+    def get_status(self) -> tuple[str, str]:
+        return "disabled", "Stub client disabled in tests."
+
 
 def make_plan(
     *,
