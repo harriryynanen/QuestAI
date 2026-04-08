@@ -8,14 +8,14 @@ from pathlib import Path
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
-APP_ROOT = Path(__file__).resolve().parent
-if str(APP_ROOT) not in sys.path:
-    sys.path.insert(0, str(APP_ROOT))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-from bootstrap import build_app_services
-from config import build_app_config
-from models import AnswerResponse, Route, SupportLevel
-from services.answer_service import AnswerService
+from app.bootstrap import build_app_services
+from app.config import build_app_config
+from app.models import AnswerResponse, Route, SupportLevel
+from app.services.answer_service import AnswerService
 
 
 class ConversationTurnResponsePayload(BaseModel):

@@ -3,22 +3,19 @@ from pathlib import Path
 
 import pytest
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-APP_ROOT = PROJECT_ROOT / "app"
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-if str(APP_ROOT) not in sys.path:
-    sys.path.insert(0, str(APP_ROOT))
-
-from config import build_app_config
-from models import RetrievalSynthesisResult, SemanticPlanningResult, SemanticQueryPlan
-from retrieval.chunker import MarkdownChunker
-from retrieval.document_store import DocumentStore
-from retrieval.retriever import KeywordRetriever
-from services.answer_service import AnswerService
-from services.router import RuleBasedRouter
-from structured.customer_data import CustomerDataLoader
-from structured.query_engine import StructuredQueryEngine
+from app.config import build_app_config
+from app.models import RetrievalSynthesisResult, SemanticPlanningResult, SemanticQueryPlan
+from app.retrieval.chunker import MarkdownChunker
+from app.retrieval.document_store import DocumentStore
+from app.retrieval.retriever import KeywordRetriever
+from app.services.answer_service import AnswerService
+from app.services.router import RuleBasedRouter
+from app.structured.customer_data import CustomerDataLoader
+from app.structured.query_engine import StructuredQueryEngine
 
 
 class StaticPlanner:

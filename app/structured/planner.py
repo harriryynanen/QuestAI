@@ -1,5 +1,5 @@
-from llm.client import LLMClient
-from models import SemanticPlanningResult, SemanticQueryPlan
+from app.llm.client import LLMClient
+from app.models import SemanticPlanningResult, SemanticQueryPlan
 
 
 class StructuredQueryPlanner:

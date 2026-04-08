@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from models import (
+from app.models import (
     CombinedEvidence,
     RetrievalSynthesisResult,
     RetrievedChunk,

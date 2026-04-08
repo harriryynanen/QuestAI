@@ -1,7 +1,7 @@
 import pandas as pd
 
-from models import SemanticQueryPlan, StructuredQueryResult
-from structured.schema_metadata import get_structured_field_aliases
+from app.models import SemanticQueryPlan, StructuredQueryResult
+from app.structured.schema_metadata import get_structured_field_aliases
 
 
 class AdvisoryCaseQueryHandler:

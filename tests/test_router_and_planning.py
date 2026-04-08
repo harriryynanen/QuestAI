@@ -1,9 +1,9 @@
 import json
 
-from llm.openai_client import OpenAIAppClient
-from llm.prompts import build_semantic_plan_messages
-from models import RoutingDecision
-from services.router import RuleBasedRouter, is_confident_routing_decision
+from app.llm.openai_client import OpenAIAppClient
+from app.llm.prompts import build_semantic_plan_messages
+from app.models import RoutingDecision
+from app.services.router import RuleBasedRouter, is_confident_routing_decision
 
 
 def test_semantic_planning_parses_valid_json(monkeypatch):

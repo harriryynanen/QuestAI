@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from models import DocumentLoadResult, DocumentRecord, RetrievalSynthesisResult
+from app.models import DocumentLoadResult, DocumentRecord, RetrievalSynthesisResult
 
 
 def test_retrieval_flow_returns_grounded_sources(

@@ -1,4 +1,4 @@
-from models import DocumentChunk, DocumentRecord
+from app.models import DocumentChunk, DocumentRecord
 
 
 class MarkdownChunker:

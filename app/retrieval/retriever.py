@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from models import DocumentChunk, RetrievedChunk
-from retrieval.scoring import RetrievalScoringHelper
+from app.models import DocumentChunk, RetrievedChunk
+from app.retrieval.scoring import RetrievalScoringHelper
 
 
 class KeywordRetriever:

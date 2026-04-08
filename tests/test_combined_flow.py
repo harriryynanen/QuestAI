@@ -1,4 +1,4 @@
-from models import AnswerResponse, RetrievalSynthesisResult
+from app.models import AnswerResponse, RetrievalSynthesisResult
 
 
 def test_combined_flow_assembles_document_and_structured_sources(

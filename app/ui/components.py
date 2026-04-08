@@ -7,9 +7,9 @@ from typing import Any, Callable
 
 import streamlit as st
 
-from models import AnswerResponse
-from services.answer_service import AnswerService
-from ui.formatters import build_visible_source_references, format_source_reference
+from app.models import AnswerResponse
+from app.services.answer_service import AnswerService
+from app.ui.formatters import build_visible_source_references, format_source_reference
 
 
 def render_header(status_line: str, clear_callback: Callable[[], None]) -> None:

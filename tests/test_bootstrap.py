@@ -2,9 +2,9 @@ from dataclasses import replace
 
 import pytest
 
-from bootstrap import _build_llm_client
-from config import build_app_config
-from llm.openai_client import OpenAIAppClient
+from app.bootstrap import _build_llm_client
+from app.config import build_app_config
+from app.llm.openai_client import OpenAIAppClient
 
 
 def test_build_llm_client_returns_openai_client_by_default():

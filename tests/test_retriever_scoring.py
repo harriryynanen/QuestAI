@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from models import DocumentChunk, DocumentRecord
-from retrieval.chunker import MarkdownChunker
-from retrieval.retriever import KeywordRetriever
+from app.models import DocumentChunk, DocumentRecord
+from app.retrieval.chunker import MarkdownChunker
+from app.retrieval.retriever import KeywordRetriever
 
 
 def test_retriever_prefers_exact_phrase_and_heading_matches():

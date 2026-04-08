@@ -1,5 +1,5 @@
-from llm.client import LLMClient
-from models import (
+from app.llm.client import LLMClient
+from app.models import (
     AnswerResponse,
     CombinedEvidence,
     CustomerAssessment,
@@ -10,15 +10,15 @@ from models import (
     SemanticQueryPlan,
     StructuredDatasetName,
 )
-from retrieval.chunker import MarkdownChunker
-from retrieval.document_store import DocumentStore
-from retrieval.retriever import KeywordRetriever
-from services.conversation_scope import ConversationScopeResolver
-from services.router import RuleBasedRouter, is_confident_routing_decision
-from structured.customer_data import CustomerDataLoader
-from structured.planner import StructuredQueryPlanner
-from structured.query_engine import StructuredQueryEngine
-from structured.schema_metadata import infer_structured_dataset_from_field
+from app.retrieval.chunker import MarkdownChunker
+from app.retrieval.document_store import DocumentStore
+from app.retrieval.retriever import KeywordRetriever
+from app.services.conversation_scope import ConversationScopeResolver
+from app.services.router import RuleBasedRouter, is_confident_routing_decision
+from app.structured.customer_data import CustomerDataLoader
+from app.structured.planner import StructuredQueryPlanner
+from app.structured.query_engine import StructuredQueryEngine
+from app.structured.schema_metadata import infer_structured_dataset_from_field
 
 
 class AnswerService:

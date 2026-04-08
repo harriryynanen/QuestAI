@@ -3,15 +3,15 @@ from difflib import SequenceMatcher
 
 import pandas as pd
 
-from models import (
+from app.models import (
     CombinedEvidence,
     CustomerAssessment,
     SemanticQueryPlan,
     StructuredDatasetName,
     StructuredQueryResult,
 )
-from structured.advisory_case_handler import AdvisoryCaseQueryHandler
-from structured.schema_metadata import (
+from app.structured.advisory_case_handler import AdvisoryCaseQueryHandler
+from app.structured.schema_metadata import (
     get_structured_field_aliases,
     get_structured_field_label,
 )

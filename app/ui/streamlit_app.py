@@ -2,25 +2,29 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import streamlit as st
 
-try:
-    from app.bootstrap import build_app_services
-except ModuleNotFoundError:
-    from bootstrap import build_app_services
-from config import build_app_config
-from llm.client import LLMClient
-from retrieval.chunker import MarkdownChunker
-from retrieval.document_store import DocumentStore
-from services.answer_service import AnswerService
-from ui.components import (
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from app.bootstrap import build_app_services
+from app.config import build_app_config
+from app.llm.client import LLMClient
+from app.retrieval.chunker import MarkdownChunker
+from app.retrieval.document_store import DocumentStore
+from app.services.answer_service import AnswerService
+from app.ui.components import (
     build_dynamic_prompt_chips,
     render_composer,
     render_conversation,
     render_header,
     render_status_note,
 )
-from ui.styles import inject_styles
+from app.ui.styles import inject_styles
 
 
 QUESTION_INPUT_KEY = "question_input"

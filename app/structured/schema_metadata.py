@@ -1,4 +1,4 @@
-from models import StructuredDatasetName
+from app.models import StructuredDatasetName
 
 
 STRUCTURED_DATASET_SCHEMAS: dict[StructuredDatasetName, dict[str, object]] = {

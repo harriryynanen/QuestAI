@@ -2,7 +2,7 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-from models import DocumentInfo, DocumentLoadIssue, DocumentLoadResult, DocumentRecord
+from app.models import DocumentInfo, DocumentLoadIssue, DocumentLoadResult, DocumentRecord
 
 
 class DocumentStore:

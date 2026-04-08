@@ -1,4 +1,4 @@
-from structured.query_engine import StructuredQueryEngine
+from app.structured.query_engine import StructuredQueryEngine
 
 
 def test_structured_fact_query_with_semantic_plan(

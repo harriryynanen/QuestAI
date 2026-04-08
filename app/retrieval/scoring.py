@@ -7,8 +7,8 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 
-from models import DocumentChunk
-from retrieval.corpus_metadata import (
+from app.models import DocumentChunk
+from app.retrieval.corpus_metadata import (
     DEMO_GENERAL_POLICY_HEADINGS,
     DEMO_KNOWN_PHRASES,
     DEMO_PRODUCT_TERMS,

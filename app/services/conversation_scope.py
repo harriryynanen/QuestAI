@@ -1,4 +1,4 @@
-from models import SemanticPlanningResult, SemanticQueryPlan
+from app.models import SemanticPlanningResult, SemanticQueryPlan
 
 
 class ConversationScopeResolver:

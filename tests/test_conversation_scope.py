@@ -1,5 +1,5 @@
-from models import AnswerResponse
-from services.conversation_scope import ConversationScopeResolver
+from app.models import AnswerResponse
+from app.services.conversation_scope import ConversationScopeResolver
 
 
 def test_conversation_scope_resolver_maps_structured_list_follow_up():

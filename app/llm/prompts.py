@@ -1,5 +1,5 @@
-from models import RetrievedChunk
-from structured.schema_metadata import (
+from app.models import RetrievedChunk
+from app.structured.schema_metadata import (
     SUPPORTED_SEMANTIC_FIELD_NAMES,
     build_structured_schema_prompt_text,
 )

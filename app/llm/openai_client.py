@@ -2,13 +2,13 @@ import json
 
 from openai import OpenAI
 
-from llm.prompts import (
+from app.llm.prompts import (
     SUPPORTED_SEMANTIC_FIELD_NAMES,
     build_combined_answer_messages,
     build_retrieval_messages,
     build_semantic_plan_messages,
 )
-from models import (
+from app.models import (
     CombinedEvidence,
     RetrievalSynthesisResult,
     RetrievedChunk,

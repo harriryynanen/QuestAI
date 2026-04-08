@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from models import StructuredDataInfo, StructuredDatasetName
+from app.models import StructuredDataInfo, StructuredDatasetName
 
 
 class CustomerDataLoader:

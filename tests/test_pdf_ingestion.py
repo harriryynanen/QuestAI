@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from retrieval.chunker import MarkdownChunker
-from retrieval.document_store import DocumentStore
+from app.retrieval.chunker import MarkdownChunker
+from app.retrieval.document_store import DocumentStore
 
 
 @pytest.fixture

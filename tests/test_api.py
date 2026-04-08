@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from api import create_api_app
+from app.api import create_api_app
 
 
 def test_health_endpoint_returns_success(answer_service_factory, plan_factory, planning_result_factory):

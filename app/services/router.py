@@ -1,4 +1,4 @@
-from models import Route, RoutingDecision
+from app.models import Route, RoutingDecision
 
 
 class RuleBasedRouter:
