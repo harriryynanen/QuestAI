@@ -67,7 +67,7 @@ def _build_status_line(
     llm_client: OpenAIAppClient,
     retrieval_documents: list,
     chunks: list,
-    dataset_info,
+    customer_data_loader,
 ) -> str:
     """Build the compact runtime status line shown in the header."""
     markdown_count = sum(
@@ -76,6 +76,17 @@ def _build_status_line(
     text_count = sum(1 for document in retrieval_documents if document.source_type == "text")
     pdf_count = sum(1 for document in retrieval_documents if document.source_type == "pdf")
     retrieval_status = "OpenAI available" if llm_client.is_available() else "Fallback mode"
+    structured_dataset_infos = [
+        customer_data_loader.get_data_info(dataset_name)
+        for dataset_name in customer_data_loader.DATASET_FILES
+    ]
+    loaded_structured_datasets = [
+        info for info in structured_dataset_infos if info.dataset_found and info.row_count is not None
+    ]
+    structured_dataset_summary = f"Structured datasets: {len(loaded_structured_datasets)}"
+    total_structured_rows = sum(info.row_count or 0 for info in loaded_structured_datasets)
+    if loaded_structured_datasets:
+        structured_dataset_summary += f" ({total_structured_rows} rows)"
 
     return (
         f"Retrieval synthesis: {retrieval_status} | "
@@ -84,7 +95,7 @@ def _build_status_line(
         f"Text docs: {text_count} | "
         f"PDF docs: {pdf_count} | "
         f"Chunks: {len(chunks)} | "
-        f"CSV: {dataset_info.file_name if dataset_info.dataset_found and dataset_info.file_name else 'Not loaded'}"
+        f"{structured_dataset_summary}"
     )
 
 
@@ -103,7 +114,6 @@ def run_app() -> None:
     retrieval_documents = retrieval_bundle.documents
     document_load_issues = retrieval_bundle.issues
     chunks = chunker.chunk_documents(retrieval_documents)
-    dataset_info = customer_data_loader.get_data_info()
     skipped_pdf_issues = [
         issue for issue in document_load_issues if issue.source_type == "pdf"
     ]
@@ -119,7 +129,7 @@ def run_app() -> None:
         llm_client=llm_client,
         retrieval_documents=retrieval_documents,
         chunks=chunks,
-        dataset_info=dataset_info,
+        customer_data_loader=customer_data_loader,
     )
 
     render_header(status_line=status_line, clear_callback=_clear_conversation)
