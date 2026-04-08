@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from app.config import AppConfig
 from app.llm.client import LLMClient
-from app.llm.openai_client import OpenAIAppClient
 from app.retrieval.chunker import MarkdownChunker
 from app.retrieval.document_store import DocumentStore
 from app.retrieval.retriever import KeywordRetriever
@@ -62,6 +61,9 @@ def _build_llm_client(config: AppConfig) -> LLMClient:
             f"Unsupported LLM provider: {config.llm_provider}. Only 'openai' is currently supported."
         )
 
+    from app.llm.openai_client import OpenAIAppClient
+
+    OpenAIAppClient.ensure_dependency_available()
     return OpenAIAppClient(
         model=config.openai_model,
         enabled=config.llm_enabled_for_retrieval,

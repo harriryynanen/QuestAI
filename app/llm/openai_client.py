@@ -1,6 +1,6 @@
 import json
-
-from openai import OpenAI
+from importlib import import_module
+from typing import Any
 
 from app.llm.prompts import (
     SUPPORTED_SEMANTIC_FIELD_NAMES,
@@ -27,7 +27,16 @@ class OpenAIAppClient:
         self.model = model
         self.enabled = enabled
         self.api_key = api_key
-        self._client: OpenAI | None = None
+        self._client: Any | None = None
+
+    @staticmethod
+    def ensure_dependency_available() -> None:
+        try:
+            import_module("openai")
+        except ModuleNotFoundError as exc:
+            raise RuntimeError(
+                "OpenAI provider is configured, but the 'openai' package is not installed."
+            ) from exc
 
     def synthesize_retrieval_answer(
         self,
@@ -119,9 +128,11 @@ class OpenAIAppClient:
             return "missing_api_key", "LLM synthesis unavailable: missing API key."
         return "success", "OpenAI retrieval synthesis available."
 
-    def _get_client(self) -> OpenAI:
+    def _get_client(self):
         if self._client is None:
-            self._client = OpenAI(api_key=self.api_key)
+            self.ensure_dependency_available()
+            openai_module = import_module("openai")
+            self._client = openai_module.OpenAI(api_key=self.api_key)
         return self._client
 
     def plan_question(
