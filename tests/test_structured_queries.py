@@ -28,6 +28,35 @@ def test_structured_fact_query_with_semantic_plan(
     assert dataset_file_name in result.sources_used[0]
 
 
+def test_structured_fact_query_with_missing_planned_field_returns_safe_response(
+    structured_query_engine,
+    dataframe,
+    dataset_file_name,
+    plan_factory,
+):
+    plan = plan_factory(
+        route="structured",
+        operation="fact",
+        customer_name="Harbor Foods Demo Oy",
+        field_name="advisory_owner",
+        needs_structured_data=True,
+        structured_dataset="customer_portfolio",
+    )
+
+    result = structured_query_engine.answer(
+        question="Who is responsible for Harbor Foods Demo Oy's case?",
+        dataframe=dataframe,
+        dataset_file_name=dataset_file_name,
+        plan=plan,
+        dataset_name="customer_portfolio",
+    )
+
+    assert result.support_level == "low"
+    assert "planned field does not exist" in result.answer.lower()
+    assert result.matched_customer_name == "Harbor Foods Demo Oy"
+    assert result.matched_field_name == "advisory_owner"
+
+
 def test_structured_filter_query_returns_matching_customers(
     structured_query_engine,
     dataframe,

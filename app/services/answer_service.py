@@ -166,12 +166,12 @@ class AnswerService:
         question: str,
         semantic_plan: SemanticQueryPlan | None,
     ) -> StructuredDatasetName:
-        if semantic_plan is not None and semantic_plan.structured_dataset is not None:
-            return semantic_plan.structured_dataset
         if semantic_plan is not None:
             inferred_dataset = infer_structured_dataset_from_field(semantic_plan.field_name)
             if inferred_dataset is not None:
                 return inferred_dataset
+            if semantic_plan.structured_dataset is not None:
+                return semantic_plan.structured_dataset
 
         normalized = question.lower()
         if any(term in normalized for term in self.ADVISORY_CASE_TERMS):

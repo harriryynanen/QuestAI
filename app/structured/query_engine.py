@@ -505,6 +505,18 @@ class StructuredQueryEngine:
         if plan.operation == "fact":
             if plan.field_name is None or customer_match["status"] != "single":
                 return None
+            if plan.field_name not in dataframe.columns:
+                return StructuredQueryResult(
+                    answer="I found the customer, but the planned field does not exist in the selected structured dataset.",
+                    sources_used=[f"{dataset_file_name} | row: {customer_match['matches'][0]}"],
+                    support_level="low",
+                    limitations="The semantic plan pointed to a field that is not available in this CSV dataset.",
+                    matched_customer_name=str(customer_match["matches"][0]),
+                    matched_customer_names=[str(customer_match["matches"][0])],
+                    matched_field_name=plan.field_name,
+                    planning_method=plan.method,
+                    planning_reason=plan.reason,
+                )
             row = dataframe.loc[dataframe["customer_name"] == customer_match["matches"][0]].iloc[0]
             return self._build_fact_result(
                 row=row,
@@ -578,6 +590,18 @@ class StructuredQueryEngine:
         planning_reason: str | None,
     ) -> StructuredQueryResult:
         customer_name = str(row["customer_name"])
+        if field_name not in row.index:
+            return StructuredQueryResult(
+                answer="I found the customer, but the requested field does not exist in the selected structured dataset.",
+                sources_used=[f"{dataset_file_name} | row: {customer_name}"],
+                support_level="low",
+                limitations="This deterministic step can only answer fields that are present in the current CSV row.",
+                matched_customer_name=customer_name,
+                matched_customer_names=[customer_name],
+                matched_field_name=field_name,
+                planning_method=planning_method,
+                planning_reason=planning_reason,
+            )
         value = row[field_name]
         label = self._field_label(field_name)
 

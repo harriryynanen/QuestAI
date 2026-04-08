@@ -162,6 +162,33 @@ def test_answer_service_can_infer_advisory_dataset_from_planned_field(
     assert response.matched_field_name == "advisory_owner"
 
 
+def test_answer_service_prefers_field_owned_dataset_over_conflicting_planned_dataset(
+    answer_service_factory,
+    plan_factory,
+    planning_result_factory,
+):
+    planning_result = planning_result_factory(
+        plan_factory(
+            route="structured",
+            operation="fact",
+            customer_name="Harbor Foods Demo Oy",
+            field_name="advisory_owner",
+            needs_structured_data=True,
+            confidence="high",
+            reason="Planner found the right field but chose the wrong dataset.",
+            structured_dataset="customer_portfolio",
+        )
+    )
+    service = answer_service_factory(planning_result=planning_result)
+
+    response = service.answer_question("Who is responsible for Harbor Foods Demo Oy's case?")
+
+    assert response.route == "structured"
+    assert response.support_level == "high"
+    assert "Mika Salonen" in response.answer
+    assert response.matched_field_name == "advisory_owner"
+
+
 @pytest.mark.parametrize(
     ("question", "plan"),
     [
