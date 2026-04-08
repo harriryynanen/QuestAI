@@ -12,7 +12,7 @@ The current implementation combines:
 
 The solution is intentionally scoped around decision support, not automated decision-making. It can help an advisor explore policy guidance, inspect customer or case facts, and form cautious preliminary views from mixed evidence, but it does not make approvals, risk decisions, or production-grade financial recommendations.
 
-## Why This Was Built
+## Why This Was Built (What did you build and why?)
 
 The assignment is a good fit for a common real-world AI engineering problem: combining unstructured documents, structured records, and LLM capabilities in a way that stays grounded, reviewable, and reasonably safe.
 
@@ -25,6 +25,15 @@ I built QuestAI to demonstrate a few practical engineering choices:
 - preserve graceful fallback behavior when AI capabilities are unavailable or uncertain
 
 This is why the project is deliberately not a generic chatbot. It is a scoped assistant with explicit boundaries.
+
+## Key Technical And AI Decisions (What key technical or AI-related decisions did you make, and why?)
+
+- LLMs are used for semantic planning and evidence-based synthesis, not for unconstrained execution.
+- Structured CSV answers stay deterministic so exact values come from the data rather than model generation.
+- Retrieval is intentionally lightweight and local instead of using a vector database or heavier retrieval stack.
+- Provenance and limitations are visible in the UI so answers stay inspectable.
+- Fallback behavior is built in when LLM capabilities are unavailable or uncertain.
+- The solution is intentionally scoped as constrained decision support rather than a generic autonomous agent.
 
 ## What The Application Does
 
@@ -63,7 +72,7 @@ What it intentionally does not contain:
 
 This matters for evaluation: the app is demonstrating architecture, reasoning boundaries, and explainability patterns, not domain accuracy for real financial operations.
 
-## Architecture Overview
+## Architecture Overview (How does the solution work at a high level?)
 
 The repository is organized into small modules with clear responsibilities:
 
@@ -272,7 +281,7 @@ Deliberately out of scope for this assignment:
 - production observability and deployment automation
 - policy enforcement beyond demo-level guardrails
 
-## Failure Modes And Limitations
+## Failure Modes And Limitations (Where can this solution fail or produce incorrect results?)
 
 There are several places where the current system can still be wrong or incomplete.
 
@@ -287,6 +296,15 @@ There are several places where the current system can still be wrong or incomple
 - audit trail and observability are still future production-path items rather than implemented features
 
 Most importantly, the app should not be interpreted as making correct real-world financial judgments. It is a controlled demo for grounded AI-assisted decision support patterns.
+
+## Next Steps Toward Production (What would you do next if this were taken toward production?)
+
+- Add stronger retrieval infrastructure and evaluation before treating retrieval as production-grade.
+- Add better observability and audit trail support around requests, evidence use, and failures.
+- Add authentication and access control for real users and real data.
+- Make structured-data onboarding more robust while keeping deterministic validation in place.
+- Strengthen security hardening beyond the current lightweight guardrails.
+- Add more production-ready backend and deployment maturity around operations and hosting.
 
 ## Local Run Instructions
 

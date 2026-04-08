@@ -1,4 +1,7 @@
 from dataclasses import replace
+import builtins
+import importlib
+import sys
 
 import pytest
 
@@ -35,3 +38,22 @@ def test_build_llm_client_fails_clearly_when_openai_dependency_is_missing(monkey
 
     with pytest.raises(RuntimeError, match="package is not installed"):
         _build_llm_client(config)
+
+
+def test_importing_api_and_bootstrap_does_not_require_openai(monkeypatch):
+    real_import = builtins.__import__
+
+    def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "openai" or name.startswith("openai."):
+            raise ModuleNotFoundError("No module named 'openai'")
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+    for module_name in ("app.api", "app.bootstrap", "app.llm.openai_client"):
+        sys.modules.pop(module_name, None)
+
+    bootstrap_module = importlib.import_module("app.bootstrap")
+    api_module = importlib.import_module("app.api")
+
+    assert hasattr(bootstrap_module, "_build_llm_client")
+    assert hasattr(api_module, "create_api_app")
