@@ -26,8 +26,11 @@ class RuleBasedRouter:
     STRUCTURED_QUERY_PHRASES = (
         "which customer",
         "which customers",
+        "which case",
+        "which cases",
         "what is",
         "how many",
+        "who owns",
     )
 
     STRUCTURED_DATA_KEYWORDS = (
@@ -47,6 +50,12 @@ class RuleBasedRouter:
         "missing",
         "lowest",
         "interested in",
+        "advisory owner",
+        "support level",
+        "escalation flag",
+        "next action",
+        "preliminary status",
+        "open cases",
     )
 
     COMBINED_PHRASES = (
@@ -65,6 +74,8 @@ class RuleBasedRouter:
         "customer row",
         "customer portfolio",
         "customer facts",
+        "company ",
+        "companies ",
         "customers ",
         "customer ",
         " oy",

@@ -78,6 +78,7 @@ def make_plan(
     confidence: str = "high",
     reason: str = "Test plan",
     method: str = "llm",
+    structured_dataset: str | None = None,
 ) -> SemanticQueryPlan:
     return SemanticQueryPlan(
         route=route,
@@ -93,6 +94,7 @@ def make_plan(
         confidence=confidence,
         reason=reason,
         method=method,
+        structured_dataset=structured_dataset,
     )
 
 
@@ -137,6 +139,16 @@ def dataframe(customer_data_loader):
 @pytest.fixture
 def dataset_file_name(customer_data_loader):
     return customer_data_loader.get_dataset_file_name()
+
+
+@pytest.fixture
+def advisory_dataframe(customer_data_loader):
+    return customer_data_loader.get_dataframe("advisory_case_pipeline")
+
+
+@pytest.fixture
+def advisory_dataset_file_name(customer_data_loader):
+    return customer_data_loader.get_dataset_file_name("advisory_case_pipeline")
 
 
 @pytest.fixture

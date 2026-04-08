@@ -5,6 +5,7 @@ from typing import Literal
 
 Route = Literal["retrieval", "structured", "combined", "unknown"]
 SupportLevel = Literal["low", "medium", "high"]
+StructuredDatasetName = Literal["customer_portfolio", "advisory_case_pipeline"]
 SynthesisStatus = Literal["success", "missing_api_key", "disabled", "api_error", "invalid_response"]
 RoutingMethod = Literal["llm", "rules", "safe_fallback"]
 RoutingStatus = Literal["success", "missing_api_key", "disabled", "api_error", "invalid_response"]
@@ -62,6 +63,7 @@ class StructuredDataInfo:
     file_name: str | None
     row_count: int | None
     column_names: list[str]
+    dataset_name: StructuredDatasetName | None = None
 
 
 @dataclass(frozen=True)
@@ -160,6 +162,7 @@ class SemanticQueryPlan:
     confidence: SupportLevel
     reason: str
     method: PlanningMethod
+    structured_dataset: StructuredDatasetName | None = None
 
 
 @dataclass(frozen=True)

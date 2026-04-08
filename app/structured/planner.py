@@ -32,4 +32,5 @@ class StructuredQueryPlanner:
             reason=reason,
             confidence="low",
             method="heuristic_fallback",
+            structured_dataset=None,
         )

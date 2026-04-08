@@ -142,6 +142,7 @@ class OpenAIAppClient:
             confidence="low",
             reason="Semantic planning unavailable.",
             method="llm",
+            structured_dataset=None,
         )
         if not self.enabled:
             return SemanticPlanningResult(
@@ -225,6 +226,14 @@ class OpenAIAppClient:
                                     "enum": ["low", "medium", "high"],
                                 },
                                 "reason": {"type": "string"},
+                                "structured_dataset": {
+                                    "type": ["string", "null"],
+                                    "enum": [
+                                        "customer_portfolio",
+                                        "advisory_case_pipeline",
+                                        None,
+                                    ],
+                                },
                             },
                             "required": [
                                 "route",
@@ -239,6 +248,7 @@ class OpenAIAppClient:
                                 "needs_structured_data",
                                 "confidence",
                                 "reason",
+                                "structured_dataset",
                             ],
                             "additionalProperties": False,
                         },
@@ -289,6 +299,7 @@ class OpenAIAppClient:
                 confidence=str(payload["confidence"]),
                 reason=str(payload["reason"]),
                 method="llm",
+                structured_dataset=payload.get("structured_dataset"),
             ),
             status="success",
             failure_reason=None,

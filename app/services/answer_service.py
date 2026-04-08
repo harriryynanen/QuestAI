@@ -8,6 +8,7 @@ from models import (
     RoutingDecision,
     SemanticPlanningResult,
     SemanticQueryPlan,
+    StructuredDatasetName,
 )
 from retrieval.chunker import MarkdownChunker
 from retrieval.document_store import DocumentStore
@@ -69,9 +70,10 @@ class AnswerService:
 
         routing_decision = self._route_question(question, planning_result)
         route = routing_decision.route
-        dataset_info = self.customer_data_loader.get_data_info()
-        dataframe = self.customer_data_loader.get_dataframe()
-        dataset_file_name = self.customer_data_loader.get_dataset_file_name()
+        portfolio_dataset: StructuredDatasetName = "customer_portfolio"
+        dataset_info = self.customer_data_loader.get_data_info(portfolio_dataset)
+        dataframe = self.customer_data_loader.get_dataframe(portfolio_dataset)
+        dataset_file_name = self.customer_data_loader.get_dataset_file_name(portfolio_dataset)
         retrieval_documents = self.document_store.load_retrieval_documents()
         chunks = self.chunker.chunk_documents(retrieval_documents)
         semantic_plan = planning_result.plan if planning_result.status == "success" else None
@@ -89,12 +91,18 @@ class AnswerService:
             return self._build_retrieval_response(question, retrieved_chunks, routing_decision)
 
         if route == "structured":
+            structured_dataset = self._select_structured_dataset(question, semantic_plan)
+            structured_dataframe = self.customer_data_loader.get_dataframe(structured_dataset)
+            structured_dataset_file_name = self.customer_data_loader.get_dataset_file_name(
+                structured_dataset
+            )
             structured_result = self.structured_query_engine.answer(
                 question=question,
-                dataframe=dataframe,
-                dataset_file_name=dataset_file_name,
+                dataframe=structured_dataframe,
+                dataset_file_name=structured_dataset_file_name,
                 plan=semantic_plan,
                 resolved_customer_names=resolved_customer_names,
+                dataset_name=structured_dataset,
             )
             planning_reason = structured_result.planning_reason
             if planning_result.status != "success":
@@ -139,6 +147,29 @@ class AnswerService:
             dataset_info_file_name=dataset_info.file_name if dataset_info.dataset_found else None,
             resolved_customer_names=resolved_customer_names,
         )
+
+    def _select_structured_dataset(
+        self,
+        question: str,
+        semantic_plan: SemanticQueryPlan | None,
+    ) -> StructuredDatasetName:
+        if semantic_plan is not None and semantic_plan.structured_dataset is not None:
+            return semantic_plan.structured_dataset
+
+        normalized = question.lower()
+        advisory_case_terms = (
+            "case",
+            "cases",
+            "advisory owner",
+            "who owns",
+            "support level",
+            "escalation flag",
+            "next action",
+            "preliminary status",
+        )
+        if any(term in normalized for term in advisory_case_terms):
+            return "advisory_case_pipeline"
+        return "customer_portfolio"
 
     def _build_retrieval_response(
         self,

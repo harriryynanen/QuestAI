@@ -1,0 +1,11 @@
+case_id,customer_id,customer_name,case_open_date,advisory_owner,requested_product,requested_amount_eur,stated_financing_purpose,preliminary_status,support_level,missing_information_flags,escalation_flag,next_action,target_decision_window_days
+CASE-001,C001,North Harbor Test Oy,2026-03-03,Leena Korpi,FlexLine Demo,120000,Seasonal inventory build-up,open,directly_supported,,no,Prepare preliminary discussion summary,5
+CASE-002,C002,Blue Timber Sample Ltd,2026-03-05,Oskari Niemi,AssetGrow Demo,340000,CNC equipment purchase,open,directly_supported,,no,Collect investment description for escalation package,7
+CASE-003,C003,Aurora Mock Services Oy,2026-03-07,Salla Virtanen,FlexLine Demo,90000,Working capital buffer,open,partially_supported,low_equity_ratio,yes,Review balance sheet weakness before recommendation,6
+CASE-004,C004,Riverstone Demo Logistics Ltd,2026-03-08,Mika Salonen,InvoiceBridge Demo,210000,Receivables timing support,open,partially_supported,repeated_payment_delays,yes,Escalate due to payment discipline concerns,4
+CASE-005,C005,Polar Lab Sample Oy,2026-03-10,Leena Korpi,FlexLine Demo,80000,Growth-related working capital,open,partially_supported,short_operating_history;negative_ebitda,yes,Request management commentary on early-stage losses,8
+CASE-006,C006,Cedar Fleet Mock Ab,2026-03-12,Oskari Niemi,AssetGrow Demo,420000,Fleet renewal investment,open,directly_supported,,no,Prepare case note for standard review,5
+CASE-007,C007,Bright Forge Test Ltd,2026-03-14,Salla Virtanen,AssetGrow Demo,260000,Machinery upgrade,on_hold,partially_supported,tax_arrears,yes,Pause positive view until arrears issue is clarified,10
+CASE-008,C008,Harbor Foods Demo Oy,2026-03-16,Mika Salonen,InvoiceBridge Demo,180000,Receivables-backed working capital,open,directly_supported,,no,Draft preliminary fit summary,3
+CASE-009,C009,Summit Retail Sample Oy,2026-03-18,Leena Korpi,InvoiceBridge Demo,110000,Working capital support,open,partially_supported,low_b2b_invoicing_share;high_leverage,yes,Document weak product-purpose match,5
+CASE-010,C010,Maple Works Mock Ltd,2026-03-20,Oskari Niemi,FlexLine Demo,95000,General liquidity buffer,waiting_for_info,not_enough_information,latest_financials_missing,yes,Request latest financial statements,14

@@ -64,6 +64,12 @@ class AppConfig:
             "customer",
             "segment",
             "interested in",
+            "advisory owner",
+            "support level",
+            "escalation flag",
+            "next action",
+            "preliminary status",
+            "open cases",
         )
     )
 

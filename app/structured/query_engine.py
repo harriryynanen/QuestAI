@@ -3,10 +3,27 @@ from difflib import SequenceMatcher
 
 import pandas as pd
 
-from models import CombinedEvidence, CustomerAssessment, SemanticQueryPlan, StructuredQueryResult
+from models import (
+    CombinedEvidence,
+    CustomerAssessment,
+    SemanticQueryPlan,
+    StructuredDatasetName,
+    StructuredQueryResult,
+)
 
 
 class StructuredQueryEngine:
+    ADVISORY_FIELD_ALIASES: dict[str, tuple[str, ...]] = {
+        "case_id": ("case id", "case"),
+        "advisory_owner": ("advisory owner", "owner", "case owner", "who owns"),
+        "requested_product": ("requested product", "product"),
+        "preliminary_status": ("preliminary status", "status", "open"),
+        "support_level": ("support level",),
+        "missing_information_flags": ("missing information", "missing information flags"),
+        "escalation_flag": ("escalation flag", "escalated", "escalation"),
+        "next_action": ("next action", "action"),
+    }
+
     FIELD_ALIASES: dict[str, tuple[str, ...]] = {
         "latest_revenue_eur": ("turnover", "revenue", "liikevaihto"),
         "ebitda_eur": ("ebitda", "kayttokate"),
@@ -90,6 +107,7 @@ class StructuredQueryEngine:
         dataset_file_name: str | None,
         plan: SemanticQueryPlan | None = None,
         resolved_customer_names: list[str] | None = None,
+        dataset_name: StructuredDatasetName = "customer_portfolio",
     ) -> StructuredQueryResult:
         if dataframe is None or dataset_file_name is None:
             return StructuredQueryResult(
@@ -102,6 +120,14 @@ class StructuredQueryEngine:
                 matched_field_name=None,
                 planning_method=plan.method if plan is not None else "heuristic_fallback",
                 planning_reason=plan.reason if plan is not None else None,
+            )
+
+        if dataset_name == "advisory_case_pipeline":
+            return self._answer_advisory_case_pipeline(
+                question=question,
+                dataframe=dataframe,
+                dataset_file_name=dataset_file_name,
+                plan=plan,
             )
 
         if plan is not None and plan.operation != "unknown":
@@ -854,6 +880,385 @@ class StructuredQueryEngine:
 
         return None
 
+    def _answer_advisory_case_pipeline(
+        self,
+        question: str,
+        dataframe: pd.DataFrame,
+        dataset_file_name: str,
+        plan: SemanticQueryPlan | None,
+    ) -> StructuredQueryResult:
+        if plan is not None and plan.operation != "unknown":
+            planned_result = self._execute_advisory_plan(plan, dataframe, dataset_file_name)
+            if planned_result is not None:
+                return planned_result
+
+        return self._answer_advisory_with_heuristics(question, dataframe, dataset_file_name)
+
+    def _execute_advisory_plan(
+        self,
+        plan: SemanticQueryPlan,
+        dataframe: pd.DataFrame,
+        dataset_file_name: str,
+    ) -> StructuredQueryResult | None:
+        customer_match = (
+            self._match_customer(plan.customer_name, dataframe)
+            if plan.customer_name
+            else {"status": "none", "matches": []}
+        )
+
+        if customer_match["status"] == "ambiguous":
+            return StructuredQueryResult(
+                answer=(
+                    "The customer name is ambiguous. Matching case rows: "
+                    f"{', '.join(customer_match['matches'])}."
+                ),
+                sources_used=[dataset_file_name],
+                support_level="low",
+                limitations="Please ask again with the full customer name.",
+                matched_customer_name=None,
+                matched_customer_names=None,
+                matched_field_name=plan.field_name,
+                planning_method=plan.method,
+                planning_reason=plan.reason,
+            )
+
+        if plan.operation == "fact":
+            if plan.field_name not in {"advisory_owner", "next_action", "requested_product", "support_level", "preliminary_status", "case_id"}:
+                return None
+            if customer_match["status"] != "single":
+                return StructuredQueryResult(
+                    answer="I could not match the customer case safely in the advisory case pipeline.",
+                    sources_used=[dataset_file_name],
+                    support_level="low",
+                    limitations="Ask using the full customer name from the current case pipeline.",
+                    matched_customer_name=None,
+                    matched_customer_names=None,
+                    matched_field_name=plan.field_name,
+                    planning_method=plan.method,
+                    planning_reason=plan.reason,
+                )
+            row = dataframe.loc[dataframe["customer_name"] == customer_match["matches"][0]].iloc[0]
+            return self._build_advisory_fact_result(
+                row=row,
+                field_name=plan.field_name,
+                dataset_file_name=dataset_file_name,
+                planning_method=plan.method,
+                planning_reason=plan.reason,
+            )
+
+        if plan.operation == "filter":
+            if plan.field_name not in {"escalation_flag", "support_level", "preliminary_status", "requested_product"}:
+                return None
+            matches = self._filter_advisory_matches(
+                dataframe=dataframe,
+                field_name=plan.field_name,
+                filter_value=plan.filter_value,
+                product_name=plan.product_name,
+            )
+            if matches is None:
+                return None
+            return self._build_advisory_filter_result(
+                matches=matches,
+                dataset_file_name=dataset_file_name,
+                field_name=plan.field_name,
+                planning_method=plan.method,
+                planning_reason=plan.reason,
+            )
+
+        if plan.operation == "count":
+            matches = self._filter_advisory_matches(
+                dataframe=dataframe,
+                field_name="requested_product",
+                filter_value=plan.filter_value,
+                product_name=plan.product_name,
+            )
+            if matches is None:
+                matches = dataframe
+            if "preliminary_status" in dataframe.columns and (
+                plan.filter_value == "open" or "open" in (plan.reason or "").lower()
+            ):
+                matches = matches[
+                    matches["preliminary_status"].astype(str).str.lower().eq("open")
+                ]
+            if plan.product_name:
+                matches = matches[
+                    matches["requested_product"].astype(str).str.lower().eq(plan.product_name.lower())
+                ]
+            return StructuredQueryResult(
+                answer=f"The current advisory case pipeline contains {len(matches.index)} matching cases.",
+                sources_used=[f"{dataset_file_name} | rows counted"],
+                support_level="high",
+                limitations="This count reflects only the current advisory case CSV rows.",
+                matched_customer_name=None,
+                matched_customer_names=matches["customer_name"].astype(str).tolist(),
+                matched_field_name=plan.field_name,
+                planning_method=plan.method,
+                planning_reason=plan.reason,
+            )
+
+        return None
+
+    def _answer_advisory_with_heuristics(
+        self,
+        question: str,
+        dataframe: pd.DataFrame,
+        dataset_file_name: str,
+    ) -> StructuredQueryResult:
+        normalized = self._normalize_text(question)
+        field_name = self._match_advisory_field(question)
+        customer_match = self._match_customer(question, dataframe)
+
+        count_result = self._try_advisory_count_question(
+            question=normalized,
+            dataframe=dataframe,
+            dataset_file_name=dataset_file_name,
+        )
+        if count_result is not None:
+            return count_result
+
+        if customer_match["status"] == "ambiguous":
+            return StructuredQueryResult(
+                answer=(
+                    "The customer name is ambiguous. Matching case rows: "
+                    f"{', '.join(customer_match['matches'])}."
+                ),
+                sources_used=[dataset_file_name],
+                support_level="low",
+                limitations="Please ask again with the full customer name.",
+                matched_customer_name=None,
+                matched_customer_names=None,
+                matched_field_name=field_name,
+                planning_method="heuristic_fallback",
+                planning_reason="Heuristic parser found multiple advisory case matches.",
+            )
+
+        if customer_match["status"] == "single" and field_name in {"advisory_owner", "next_action", "requested_product", "support_level", "preliminary_status", "case_id"}:
+            row = dataframe.loc[dataframe["customer_name"] == customer_match["matches"][0]].iloc[0]
+            return self._build_advisory_fact_result(
+                row=row,
+                field_name=field_name,
+                dataset_file_name=dataset_file_name,
+                planning_method="heuristic_fallback",
+                planning_reason="Heuristic parser matched an advisory case fact question.",
+            )
+
+        filter_result = self._try_advisory_filter_question(
+            question=question,
+            dataframe=dataframe,
+            dataset_file_name=dataset_file_name,
+            field_name=field_name,
+        )
+        if filter_result is not None:
+            return filter_result
+
+        if customer_match["status"] == "none" and any(
+            phrase in normalized for phrase in ("who owns", "next action", "case")
+        ):
+            return StructuredQueryResult(
+                answer="I could not match the customer case in the advisory case pipeline.",
+                sources_used=[dataset_file_name],
+                support_level="low",
+                limitations="Try using the full customer name as it appears in the case pipeline CSV.",
+                matched_customer_name=None,
+                matched_customer_names=None,
+                matched_field_name=field_name,
+                planning_method="heuristic_fallback",
+                planning_reason="Heuristic parser recognized a case-style question but found no safe customer match.",
+            )
+
+        return StructuredQueryResult(
+            answer="I could not map this advisory case question to a supported deterministic query pattern.",
+            sources_used=[dataset_file_name],
+            support_level="low",
+            limitations="This step currently supports case owner lookups, next actions, simple case filters, and open-case counts by product.",
+            matched_customer_name=None,
+            matched_customer_names=None,
+            matched_field_name=field_name,
+            planning_method="heuristic_fallback",
+            planning_reason="Heuristic parser could not map the advisory case question safely.",
+        )
+
+    def _try_advisory_count_question(
+        self,
+        question: str,
+        dataframe: pd.DataFrame,
+        dataset_file_name: str,
+    ) -> StructuredQueryResult | None:
+        if "how many" not in question or "case" not in question:
+            return None
+
+        product_name = self._extract_case_product_name(question, dataframe)
+        matches = dataframe
+        if "open" in question:
+            matches = matches[matches["preliminary_status"].astype(str).str.lower().eq("open")]
+        if product_name is not None:
+            matches = matches[
+                matches["requested_product"].astype(str).str.lower().eq(product_name.lower())
+            ]
+
+        if product_name and "open" in question:
+            answer = f"There are {len(matches.index)} open {product_name} cases in the current advisory case pipeline."
+        else:
+            answer = f"The current advisory case pipeline contains {len(matches.index)} matching cases."
+
+        return StructuredQueryResult(
+            answer=answer,
+            sources_used=[f"{dataset_file_name} | rows counted"],
+            support_level="high",
+            limitations="This count reflects only the current advisory case CSV rows.",
+            matched_customer_name=None,
+            matched_customer_names=matches["customer_name"].astype(str).tolist(),
+            matched_field_name="requested_product" if product_name else "preliminary_status" if "open" in question else None,
+            planning_method="heuristic_fallback",
+            planning_reason="Heuristic parser matched an advisory case count question.",
+        )
+
+    def _try_advisory_filter_question(
+        self,
+        question: str,
+        dataframe: pd.DataFrame,
+        dataset_file_name: str,
+        field_name: str | None,
+    ) -> StructuredQueryResult | None:
+        normalized = self._normalize_text(question)
+        if "which" not in normalized:
+            return None
+
+        if field_name == "escalation_flag" or "escalation flag" in normalized:
+            matches = dataframe[
+                dataframe["escalation_flag"].astype(str).str.lower().eq("yes")
+            ]
+            return self._build_advisory_filter_result(
+                matches=matches,
+                dataset_file_name=dataset_file_name,
+                field_name="escalation_flag",
+                planning_method="heuristic_fallback",
+                planning_reason="Heuristic parser matched an escalation-flag case filter.",
+            )
+
+        if field_name == "support_level" and (
+            "not enough information" in normalized
+            or "not_enough_information" in question.lower()
+        ):
+            matches = dataframe[
+                dataframe["support_level"].astype(str).str.lower().eq("not_enough_information")
+            ]
+            return self._build_advisory_filter_result(
+                matches=matches,
+                dataset_file_name=dataset_file_name,
+                field_name="support_level",
+                planning_method="heuristic_fallback",
+                planning_reason="Heuristic parser matched a support-level case filter.",
+            )
+
+        return None
+
+    def _build_advisory_fact_result(
+        self,
+        row: pd.Series,
+        field_name: str,
+        dataset_file_name: str,
+        planning_method: str,
+        planning_reason: str | None,
+    ) -> StructuredQueryResult:
+        customer_name = str(row["customer_name"])
+        value = self._format_value(field_name, row[field_name])
+        label = self._field_label(field_name)
+        if field_name == "advisory_owner":
+            answer = f"{customer_name}'s case is owned by {value}."
+        elif field_name == "next_action":
+            answer = f"The next action for {customer_name}'s case is: {value}."
+        else:
+            answer = f"{customer_name}'s case {label} is {value}."
+
+        return StructuredQueryResult(
+            answer=answer,
+            sources_used=[f"{dataset_file_name} | row: {customer_name} | column: {field_name}"],
+            support_level="high",
+            limitations="This answer is taken directly from the current advisory case CSV row.",
+            matched_customer_name=customer_name,
+            matched_customer_names=[customer_name],
+            matched_field_name=field_name,
+            planning_method=planning_method,
+            planning_reason=planning_reason,
+        )
+
+    def _build_advisory_filter_result(
+        self,
+        matches: pd.DataFrame,
+        dataset_file_name: str,
+        field_name: str,
+        planning_method: str,
+        planning_reason: str | None,
+    ) -> StructuredQueryResult:
+        case_names = matches["customer_name"].astype(str).tolist()
+        if matches.empty:
+            answer = f"No cases matched the filter: {self._field_label(field_name)}."
+        else:
+            answer = f"Matching cases: {', '.join(case_names)}."
+
+        return StructuredQueryResult(
+            answer=answer,
+            sources_used=[f"{dataset_file_name} | filter: {field_name}"],
+            support_level="high",
+            limitations="This result reflects only the current advisory case CSV rows.",
+            matched_customer_name=None,
+            matched_customer_names=case_names,
+            matched_field_name=field_name,
+            planning_method=planning_method,
+            planning_reason=planning_reason,
+        )
+
+    def _filter_advisory_matches(
+        self,
+        dataframe: pd.DataFrame,
+        field_name: str,
+        filter_value: str | None,
+        product_name: str | None,
+    ) -> pd.DataFrame | None:
+        if field_name == "requested_product":
+            target = product_name or filter_value
+            if not target:
+                return None
+            return dataframe[
+                dataframe["requested_product"].astype(str).str.lower().eq(target.lower())
+            ]
+
+        if field_name == "escalation_flag":
+            target = (filter_value or "yes").lower()
+            return dataframe[
+                dataframe["escalation_flag"].astype(str).str.lower().eq(target)
+            ]
+
+        if field_name in {"support_level", "preliminary_status"}:
+            if not filter_value:
+                return None
+            return dataframe[
+                dataframe[field_name].astype(str).str.lower().eq(filter_value.lower())
+            ]
+
+        return None
+
+    def _match_advisory_field(self, question: str) -> str | None:
+        normalized = self._normalize_text(question)
+        best_field: str | None = None
+        best_length = -1
+        for field_name, aliases in self.ADVISORY_FIELD_ALIASES.items():
+            for alias in aliases:
+                normalized_alias = self._normalize_text(alias)
+                if normalized_alias in normalized and len(normalized_alias) > best_length:
+                    best_field = field_name
+                    best_length = len(normalized_alias)
+        return best_field
+
+    def _extract_case_product_name(self, question: str, dataframe: pd.DataFrame) -> str | None:
+        normalized = question.lower()
+        products = dataframe["requested_product"].dropna().astype(str).unique().tolist()
+        matches = [product for product in products if product.lower() in normalized]
+        if len(matches) == 1:
+            return matches[0]
+        return None
+
     def _match_field(self, question: str) -> str | None:
         normalized = self._normalize_text(question)
         best_field: str | None = None
@@ -945,6 +1350,14 @@ class StructuredQueryEngine:
             "payment_delays_12m": "payment delays",
             "largest_customer_share_pct": "largest customer share",
             "requested_product_interest": "requested product interest",
+            "case_id": "case ID",
+            "advisory_owner": "advisory owner",
+            "requested_product": "requested product",
+            "preliminary_status": "preliminary status",
+            "support_level": "support level",
+            "missing_information_flags": "missing information flags",
+            "escalation_flag": "escalation flag",
+            "next_action": "next action",
         }
         return labels[field_name]
 
@@ -1044,6 +1457,8 @@ class StructuredQueryEngine:
 
     def _format_value(self, field_name: str, value: object) -> str:
         if field_name in {"latest_revenue_eur", "ebitda_eur"}:
+            return f"EUR {float(value):,.0f}"
+        if field_name == "requested_amount_eur":
             return f"EUR {float(value):,.0f}"
         if field_name in {
             "ebitda_margin_pct",
