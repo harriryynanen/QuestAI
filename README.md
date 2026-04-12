@@ -94,8 +94,6 @@ This is why the project is deliberately not a generic chatbot. It is a scoped as
 **Streamlit Community Cloud**
   Used as a lightweight way to expose the demo for evaluator testing without building a separate deployment platform. This supports quick interactive review, while the repository remains the primary deliverable.
 
-This stack was chosen to keep the project grounded, explainable, and easy to evaluate in a recruitment setting rather than to maximize production-scale infrastructure.
-
 ## What The Application Does
 
 QuestAI supports three main question types:
