@@ -1,6 +1,6 @@
 # QuestAI
 
-QuestAI is a lightweight AI-powered Business Q&A Assistant built for a recruitment assignment. It is designed as a constrained, explainable demo rather than a production system.
+QuestAI is a lightweight AI-powered Business Q&A Assistant. The demo is framed around a fictional business banking advisory use case, where a relationship manager or business advisor needs quick, grounded answers from internal guidance and simple structured data. All data used in the project is synthetic and created for demonstration purposes only.
 
 The current implementation combines:
 
@@ -34,6 +34,67 @@ This is why the project is deliberately not a generic chatbot. It is a scoped as
 - Provenance and limitations are visible in the UI so answers stay inspectable.
 - Fallback behavior is built in when LLM capabilities are unavailable or uncertain.
 - The solution is intentionally scoped as constrained decision support rather than a generic autonomous agent.
+
+## Tech Stack
+
+### Core application stack
+
+**Python 3.11+**
+  Main implementation language. Chosen for fast iteration, strong data tooling, and a good fit for lightweight AI application development.
+
+**Streamlit**
+  Used for the main chat-style demo UI. It was a pragmatic choice for building an interactive reviewer-friendly interface quickly without introducing unnecessary frontend complexity.
+
+**FastAPI + Uvicorn**
+  Used for the lightweight API entrypoint. This was added to show integration readiness and a reusable service-layer architecture without turning the project into a separate backend platform.
+
+### LLM and AI layer
+
+**OpenAI API**
+  Used for semantic planning and grounded answer synthesis. The model is intentionally not used for unrestricted execution over structured data.
+
+**Lightweight LLM provider abstraction**
+  The code now depends on a small LLM interface, with OpenAI as the current concrete implementation. This keeps the current solution simple while making future provider extension easier.
+
+### Retrieval and document handling
+
+**Local retrieval over Markdown, TXT, and PDF documents**
+  The document path is intentionally lightweight and local to fit the assignment scope.
+
+**Custom chunking and explainable BM25-style / lexical ranking**
+  Retrieval is implemented as an inspectable local pipeline rather than a vector database setup. This improves transparency and keeps the architecture easy to explain, even though it is less semantically powerful than production-grade embedding retrieval.
+
+**PyPDF**
+  Used for text extraction from PDF files so PDF documents can participate in retrieval when they contain readable embedded text.
+
+### Structured data and deterministic execution
+
+**Pandas**
+  Used for deterministic querying over structured CSV datasets. This keeps exact values, filtering, counting, comparisons, and supported list operations under application control rather than model generation.
+
+**Schema-aware structured planning + deterministic execution**
+  The LLM helps interpret route, dataset, and field intent, but the actual CSV operations are executed deterministically against the DataFrame.
+
+### Configuration, testing, and developer ergonomics
+
+**python-dotenv / environment-based configuration**
+  Used for local configuration and safe secret handling outside source code.
+
+**Pytest**
+  Used for automated testing across routing, planning, retrieval, structured execution, and combined flows.
+
+**HTTPX / FastAPI test tooling**
+  Used for lightweight API-level testing and request handling where needed.
+
+### Development workflow and delivery context
+
+**VS Code + Codex / ChatGPT style AI-assisted development**
+  The implementation was developed with AI assistance as allowed by the assignment. The focus remained on engineering judgment, reviewability, and explicit design decisions rather than blindly generating code.
+
+**Streamlit Community Cloud**
+  Used as a lightweight way to expose the demo for evaluator testing without building a separate deployment platform. This supports quick interactive review, while the repository remains the primary deliverable.
+
+This stack was chosen to keep the project grounded, explainable, and easy to evaluate in a recruitment setting rather than to maximize production-scale infrastructure.
 
 ## What The Application Does
 
@@ -174,6 +235,16 @@ This design balances flexibility with control:
 - deterministic fallback preserves reliability
 - uncertain cases do not silently turn into confident answers
 
+## Prompt Structure
+
+QuestAI does not use one generic LLM prompt for everything. Instead, the LLM layer is split into three prompt roles:
+
+- **semantic planning prompt** that interprets the user question into a constrained plan
+- **retrieval synthesis prompt** that answers only from retrieved document chunks
+- **combined synthesis prompt** that answers only from an explicit evidence pack containing both document and structured evidence
+
+This separation keeps the model’s role narrower and easier to reason about: first interpret safely, then synthesize only from the bounded evidence selected by the application. A more detailed prompt-level explanation is available in `design.md`.
+
 ## Combined Flow
 
 Combined questions mix unstructured and structured evidence:
@@ -267,6 +338,9 @@ Implemented in the current version:
 - lightweight LLM provider abstraction with OpenAI as the current implementation
 - constrained recent-turn follow-up and scope reuse
 - visible source grounding and expandable technical details
+
+The `Why this answer` view is intentionally more detailed than what would typically be exposed in a production user interface. In this demo, it exists to help an evaluator inspect retrieved evidence, structured matches, routing details, and explicit limitations. In a more production-oriented version, this level of internal reasoning transparency would likely be reduced, with visible explainability focused mainly on source references, concise justification, and user-appropriate limitation notes.
+
 
 ## What Is Intentionally Out Of Scope
 

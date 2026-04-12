@@ -81,6 +81,23 @@ The LLM layer is intentionally narrow. It is used for:
 
 It is not used as an unrestricted reasoning engine and does not directly execute structured CSV operations. The code now depends on a small LLM client abstraction, with OpenAI as the current concrete provider implementation.
 
+The prompt construction is also intentionally separated by task in `app/llm/prompts.py`:
+
+`build_semantic_plan_messages(...)`
+`build_retrieval_messages(...)`
+`build_combined_answer_messages(...)`
+
+These are not interchangeable prompts. Each one supports a different stage of the request lifecycle.
+
+**`build_semantic_plan_messages(...)`** is used first, during question interpretation. It does not answer the user’s question. Instead, it asks the model to produce a constrained semantic plan such as route, operation, field, dataset, and confidence. This is the point where the LLM helps with semantic interpretation rather than execution.
+
+**`build_retrieval_messages(...)`** is used only after document retrieval has already selected grounded chunks. Its job is to turn the retrieved evidence into a bounded synthesis prompt so the model answers only from the provided document context.
+
+**`build_combined_answer_messages(...)`** is used only in the combined path, after both document evidence and deterministic structured evidence have already been assembled. Its role is to produce a cautious synthesis from that explicit evidence pack rather than letting the model infer freely from outside knowledge.
+
+This separation is a deliberate quality choice. It makes the LLM layer easier to test, easier to explain, and less likely to blur planning, retrieval synthesis, and combined evidence synthesis into one opaque step.
+
+
 ### 4.5 `app/retrieval/`
 
 The retrieval layer handles document loading, chunking, local ranking, and explainable match summaries. Lightweight demo-corpus metadata is now separated from the scoring logic so that retrieval behavior and corpus-specific hints are easier to reason about independently.
@@ -285,6 +302,9 @@ This repository is intentionally bounded in several ways.
 - No autonomous agent loop is used.
 
 The project is meant to support careful review of constrained AI-assisted decision support patterns, not to simulate a production financial platform.
+
+The current prompt design also treats user questions and recent conversation content as untrusted input to classify or answer from, not as instructions to alter the system’s rules. This is supported by lightweight input guardrails and explicit prompt framing. It is not full production-grade prompt-injection hardening, but it is a deliberate demo-level safeguard.
+
 
 ## 14. Current Limitations
 
