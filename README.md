@@ -1,6 +1,6 @@
 # QuestAI
 
-QuestAI is a lightweight AI-powered Business Q&A Assistant. The demo is framed around a fictional business banking advisory use case, where a relationship manager or business advisor needs quick, grounded answers from internal guidance and simple structured data. All data used in the project is synthetic and created for demonstration purposes only.
+QuestAI is a lightweight AI-powered Business Q&A Assistant. The QuestAI is framed around a fictional business banking advisory use case, where a relationship manager or business advisor needs quick, grounded answers from internal guidance and simple structured data. All data used in the project is synthetic and created for demonstration purposes only.
 
 The current implementation combines:
 

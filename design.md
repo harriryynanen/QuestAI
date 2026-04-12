@@ -9,7 +9,7 @@ Business experts often need quick answers based on internal guidance and simple 
 
 The demonstration context is a fictional business banking advisory scenario. The user role is similar to a relationship manager working with SME customers, but all materials, customer names, product names, and examples are synthetic and created only for demonstration purposes.
 
-QuestAI is a lightweight Streamlit-based Business Q&A Assistant built for a recruitment assignment. It answers questions against a constrained set of fictional internal sources:
+QuestAI is a lightweight Streamlit-based Business Q&A Assistant. The QuestAI is framed around a fictional business banking advisory use case, where a relationship manager or business advisor needs quick, grounded answers from internal guidance and simple structured data. All data used in the project is synthetic and created for demonstration purposes only. It answers questions against a constrained set of fictional internal sources:
 
 - text-based documents representing internal guidance
 - named structured CSV datasets representing customer facts and advisory case data
@@ -22,9 +22,8 @@ The current design is optimized for five goals:
 
 1. keep the system explainable end-to-end
 2. separate probabilistic interpretation from deterministic execution
-3. keep the implementation lightweight enough for a recruitment assignment
-4. preserve graceful fallback behavior when LLM support is missing or weak
-5. make future extension possible without rewriting the core flow
+3. preserve graceful fallback behavior when LLM support is missing or weak
+4. make future extension possible without rewriting the core flow
 
 These goals are more important here than raw model capability. The project intentionally favors controlled behavior over a more open-ended assistant architecture.
 
@@ -322,8 +321,6 @@ Current limitations are deliberate and should be understood as part of the demo 
 - structured onboarding still requires small code changes for new named datasets
 - prompt-injection hardening is only lightweight demo-level guardrailing
 - observability and audit trail support are still missing
-
-These are acceptable tradeoffs for a recruitment assignment, but they would need to be addressed before production use.
 
 ## 15. Extension Path
 
